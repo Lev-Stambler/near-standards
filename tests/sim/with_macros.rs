@@ -78,3 +78,47 @@ fn simulate_simple_internal_balances_test() {
     assert_eq!(ft_bal_root.0, ft_bal_root_post_withdraw.0);
 }
 // TODO: sim specificdeposit to
+#[test]
+fn simulate_simple_internal_balances_test_with_sender_id() {
+    let (root, dummy, ft, alice) = init(DEFAULT_TOTAL_SUPPLY);
+    let amount_transfer = 1_000;
+
+    let ft_bal_root: U128 = view!(ft.ft_balance_of(root.valid_account_id())).unwrap_json();
+
+    call!(
+        root,
+        ft.ft_transfer_call(
+            dummy.valid_account_id(),
+            amount_transfer.into(),
+            None,
+            json!({"sender_id": alice.account_id()}).to_string()
+        ),
+        deposit = 1
+    )
+    .assert_success();
+
+    let ft_bal_alice_internal: U128 =
+        view!(dummy.get_ft_balance(alice.valid_account_id(), ft.valid_account_id())).unwrap_json();
+    let ft_bal_root_post_transfer: U128 =
+        view!(ft.ft_balance_of(root.valid_account_id())).unwrap_json();
+
+    assert_eq!(ft_bal_root.0 - ft_bal_root_post_transfer.0, amount_transfer);
+    assert_eq!(ft_bal_alice_internal.0, amount_transfer);
+
+    // Withdraw back into the callee's account
+    call!(
+        alice,
+        dummy.withdraw_to(amount_transfer.into(), ft.valid_account_id(), None, None),
+        deposit = 1
+    )
+    .assert_success();
+
+    let ft_bal_alice_post_withdraw: U128 =
+        view!(ft.ft_balance_of(alice.valid_account_id())).unwrap_json();
+    assert_eq!(amount_transfer, ft_bal_alice_post_withdraw.0);
+
+    let ft_bal_alice_internal: U128 =
+        view!(dummy.get_ft_balance(alice.valid_account_id(), ft.valid_account_id())).unwrap_json();
+    assert_eq!(ft_bal_alice_internal.0, 0);
+}
+// TODO: sim specificdeposit to

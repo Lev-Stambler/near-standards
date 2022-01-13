@@ -50,6 +50,29 @@ pub fn get_ft_balance<Info: BorshDeserialize + BorshSerialize + BalanceInfo + Ne
     account.info.get_balance(token_id)
 }
 
+/// Get the cost of adding 1 balance to a user's account
+pub fn get_storage_cost_for_one_balance<
+    Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo,
+>(
+    accounts: &mut Accounts<Info>,
+) -> Balance {
+    let account_id = "a".repeat(64);
+    let token_id = "b".repeat(64);
+    accounts.insert_account_unchecked(
+        &account_id,
+        &Account::default_from_account_id(account_id.clone()),
+    );
+    let storage_usage_init = env::storage_usage();
+    let mut account = accounts.get_account(&account_id).unwrap();
+    account.info.set_balance(&token_id, 0);
+    accounts.insert_account_unchecked(&account_id, &account);
+    let storage_usage = env::storage_usage();
+
+    // Remove the inserted account
+    accounts.remove_account_unchecked(&account_id);
+
+    return (storage_usage - storage_usage_init) as u128 * env::storage_byte_cost();
+}
 
 pub fn balance_transfer<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
     accounts: &mut Accounts<Info>,
@@ -66,7 +89,6 @@ pub fn balance_transfer<Info: BorshDeserialize + BorshSerialize + BalanceInfo + 
     subtract_balance(accounts, &caller, token_id, amount);
     increase_balance(accounts, &recipient, token_id, amount);
 }
- 
 
 pub fn withdraw_to<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
     accounts: &mut Accounts<Info>,
@@ -195,7 +217,8 @@ fn _internal_ft_transfer_call<Info: BorshDeserialize + BorshSerialize + BalanceI
             GAS_FOR_FT_TRANSFER_CALL_NEP141,
         ),
     };
-    let internal_resolve_args = get_internal_resolve_data(&sender, &token_id, amount, true).unwrap();
+    let internal_resolve_args =
+        get_internal_resolve_data(&sender, &token_id, amount, true).unwrap();
     env::promise_then(
         ft_transfer_prom,
         env::current_account_id(),

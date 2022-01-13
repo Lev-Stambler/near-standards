@@ -31,6 +31,12 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
 
+            fn get_storage_cost_for_one_balance(&mut self) -> Balance {
+                $crate::core_impl::get_storage_cost_for_one_balance(
+                    &mut self.$accounts
+                )
+            }
+
             fn increase_balance(
                 &mut self,
                 account_id: &AccountId,

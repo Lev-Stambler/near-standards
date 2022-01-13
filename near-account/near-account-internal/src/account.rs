@@ -17,6 +17,16 @@ pub struct Account<Info: BorshSerialize + BorshDeserialize + NewInfo> {
     pub info: Info,
 }
 
+impl<Info: BorshSerialize + BorshDeserialize + NewInfo> NewInfo for Account<Info> {
+    fn default_from_account_id(account_id: AccountId) -> Self {
+        Self {
+            near_amount: 0,
+            near_used_for_storage: 0,
+            info: Info::default_from_account_id(account_id),
+        }
+    }
+}
+
 pub trait AccountDeposits<Info: BorshDeserialize + BorshSerialize + NewInfo> {
     /// Check that storage is paid for and call the closure function
     fn check_storage<F, T: Sized>(&mut self, accounts: &mut Accounts<Info>, closure: F) -> T

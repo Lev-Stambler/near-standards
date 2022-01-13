@@ -23,7 +23,7 @@ pub trait NewInfo {
 #[derive(BorshSerialize, BorshDeserialize)]
 pub struct Accounts<AccountInfo: BorshSerialize + BorshDeserialize + NewInfo> {
     pub accounts: UnorderedMap<AccountId, Account<AccountInfo>>,
-    default_min_storage_bal: u128,
+    pub default_min_storage_bal: u128,
 }
 
 impl<AccountInfo: BorshSerialize + BorshDeserialize + NewInfo> Accounts<AccountInfo> {
@@ -48,6 +48,13 @@ impl<AccountInfo: BorshSerialize + BorshDeserialize + NewInfo> Accounts<AccountI
         let ret = account.check_storage(self, closure);
         self.accounts.insert(&account_id, &account);
         ret
+    }
+
+    pub fn remove_account_unchecked(
+        &mut self,
+        account_id: &AccountId,
+    ) -> Option<Account<AccountInfo>> {
+        self.accounts.remove(account_id)
     }
 
     pub fn insert_account_unchecked(
@@ -79,24 +86,22 @@ impl<Info: BorshSerialize + BorshDeserialize + NewInfo> Accounts<Info> {
             accounts: UnorderedMap::new(b"accounts-map".to_vec()),
             default_min_storage_bal: 0,
         };
-        ret.default_min_storage_bal = ret.get_min_storage(None, true);
+        ret.default_min_storage_bal = ret.get_storage_cost(None, true);
         ret
     }
 }
 
 impl<Info: BorshSerialize + BorshDeserialize + NewInfo> Accounts<Info> {
-    pub(crate) fn get_min_storage(
+    /// Get the cost of storage
+    /// * `unregister` - if set to false then the get_storage_cost will also register the default account with the account id
+    pub(crate) fn get_storage_cost(
         &mut self,
         account_id: Option<AccountId>,
         unregister: bool,
     ) -> u128 {
         let storage_prior = env::storage_usage();
         let account_id = account_id.unwrap_or("a".repeat(64));
-        let default_account = Account::<Info> {
-            info: Info::default_from_account_id(account_id.clone()),
-            near_amount: 0,
-            near_used_for_storage: 0
-        };
+        let default_account = Account::default_from_account_id(account_id.clone());
         self.accounts.insert(&account_id, &default_account);
 
         // Get the storage cost
@@ -191,8 +196,10 @@ impl<Info: BorshSerialize + BorshDeserialize + NewInfo> StorageManagement for Ac
             self.accounts.insert(&account_id, &account);
             account.storage_balance()
         } else {
-            let storage_cost = self.get_min_storage(Some(account_id.clone()), false);
-            if amount_attached < storage_cost {
+            // NOTE: get_storage also registers the account id here
+            let storage_cost = self.get_storage_cost(Some(account_id.clone()), false);
+            let min_storage_cost = self.storage_balance_bounds().min.0;
+            if amount_attached < storage_cost || amount_attached < min_storage_cost {
                 self.accounts.remove(&account_id);
                 Promise::new(env::predecessor_account_id()).transfer(amount_attached);
                 StorageBalance { available: 0.into(), total: 0.into() }

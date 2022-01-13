@@ -29,9 +29,14 @@ pub trait BalanceInfo {
 }
 
 pub trait SudoInternalBalanceFungibleToken {
+    /// Do a checked subtraction of an account balance
     fn subtract_balance(&mut self, account_id: &AccountId, token_id: &AccountId, amount: Balance);
+    /// Do a checked addition to an account balance
     fn increase_balance(&mut self, account_id: &AccountId, token_id: &AccountId, amount: Balance);
+    /// Same as get_ft_balance but without the serializable types
     fn get_ft_balance_internal(&self, account_id: &AccountId, token_id: &AccountId) -> Balance;
+    /// Get the storage cost for one balance account
+    fn get_storage_cost_for_one_balance(&mut self) -> Balance;
 }
 
 pub trait InternalBalanceFungibleTokenHandlers {

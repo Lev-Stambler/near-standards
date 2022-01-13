@@ -23,14 +23,14 @@ pub fn near_accounts(input: TokenStream) -> TokenStream {
             #[payable]
             pub fn accounts_storage_deposit(
                 &mut self,
-                account_id: Option<ValidAccountId>,
+                account_id: Option<near_sdk::json_types::ValidAccountId>,
                 registration_only: Option<bool>,
             ) -> near_contract_standards::storage_management::StorageBalance {
                 self.accounts.storage_deposit(account_id, registration_only)
             }
 
             #[payable]
-            pub fn accounts_storage_withdraw(&mut self, amount: Option<U128>) -> near_contract_standards::storage_management::StorageBalance {
+            pub fn accounts_storage_withdraw(&mut self, amount: Option<near_sdk::json_types::U128>) -> near_contract_standards::storage_management::StorageBalance {
                 self.accounts.storage_withdraw(amount)
             }
 
@@ -43,7 +43,7 @@ pub fn near_accounts(input: TokenStream) -> TokenStream {
                 self.accounts.storage_balance_bounds()
             }
 
-            pub fn accounts_storage_balance_of(&self, account_id: ValidAccountId) -> Option<near_contract_standards::storage_management::StorageBalance> {
+            pub fn accounts_storage_balance_of(&self, account_id: near_sdk::json_types::ValidAccountId) -> Option<near_contract_standards::storage_management::StorageBalance> {
                 self.accounts.storage_balance_of(account_id)
             }
         }
