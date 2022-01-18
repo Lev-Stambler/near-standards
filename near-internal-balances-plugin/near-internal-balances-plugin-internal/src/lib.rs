@@ -14,7 +14,10 @@ pub mod core_impl;
 mod macros;
 pub use macros::*;
 
-pub trait NearFTInternalBalance: SudoInternalBalanceFungibleToken + InternalBalanceFungibleTokenHandlers{}
+pub trait NearFTInternalBalance:
+    SudoInternalBalanceFungibleToken + InternalBalanceFungibleTokenHandlers
+{
+}
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -37,6 +40,14 @@ pub trait SudoInternalBalanceFungibleToken {
     fn get_ft_balance_internal(&self, account_id: &AccountId, token_id: &AccountId) -> Balance;
     /// Get the storage cost for one balance account
     fn get_storage_cost_for_one_balance(&mut self) -> Balance;
+    /// Same as balance transfer but internal types
+    fn balance_transfer_internal(
+        &mut self,
+        recipient: AccountId,
+        token_id: AccountId,
+        amount: u128,
+        message: Option<String>,
+    );
 }
 
 pub trait InternalBalanceFungibleTokenHandlers {

@@ -2,18 +2,21 @@
 macro_rules! impl_near_balance_plugin {
     ($contract_struct: ident, $accounts: ident, $info_struct: ident, $balance_map: ident) => {
         use $crate::{
-            BalanceInfo, InternalBalanceFungibleTokenHandlers, SudoInternalBalanceFungibleToken, NearFTInternalBalance
+            BalanceInfo, InternalBalanceFungibleTokenHandlers, NearFTInternalBalance,
+            SudoInternalBalanceFungibleToken,
         };
 
-        impl BalanceInfo for $info_struct {
+        impl $crate::BalanceInfo for $info_struct {
             fn get_balance(&self, token_id: &AccountId) -> Balance {
-                // TODO: allow for custom balance field
                 self.$balance_map.get(token_id).unwrap_or(0)
             }
 
             fn set_balance(&mut self, token_id: &AccountId, balance: Balance) {
                 self.$balance_map.insert(token_id, &balance);
             }
+        }
+
+        impl $crate::core_impl::AccountInfoTrait for $info_struct {
         }
 
         impl SudoInternalBalanceFungibleToken for $contract_struct {
@@ -32,9 +35,7 @@ macro_rules! impl_near_balance_plugin {
             }
 
             fn get_storage_cost_for_one_balance(&mut self) -> Balance {
-                $crate::core_impl::get_storage_cost_for_one_balance(
-                    &mut self.$accounts
-                )
+                $crate::core_impl::get_storage_cost_for_one_balance(&mut self.$accounts)
             }
 
             fn increase_balance(
@@ -60,6 +61,22 @@ macro_rules! impl_near_balance_plugin {
                     .get_account(&account_id)
                     .map(|a| $crate::core_impl::get_ft_balance(&a, &token_id))
                     .unwrap_or(0)
+            }
+
+            fn balance_transfer_internal(
+                &mut self,
+                recipient: AccountId,
+                token_id: AccountId,
+                amount: u128,
+                message: Option<String>,
+            ) {
+                $crate::core_impl::balance_transfer(
+                    &mut self.$accounts,
+                    &recipient,
+                    &token_id,
+                    amount,
+                    message,
+                )
             }
         }
 
@@ -105,10 +122,9 @@ macro_rules! impl_near_balance_plugin {
                 amount: U128,
                 message: Option<String>,
             ) {
-                $crate::core_impl::balance_transfer(
-                    &mut self.$accounts,
-                    &recipient.into(),
-                    &token_id.into(),
+                self.balance_transfer_internal(
+                    recipient.into(),
+                    token_id.into(),
                     amount.into(),
                     message,
                 )
@@ -131,7 +147,6 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
         }
-        impl NearFTInternalBalance for $contract_struct {
-        }
+        impl NearFTInternalBalance for $contract_struct {}
     };
 }

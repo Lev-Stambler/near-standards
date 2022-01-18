@@ -11,7 +11,7 @@ use near_sdk::{
 };
 
 pub use account::Account;
-pub use account::AccountDeposits;
+pub use account::{AccountDeposits, AccountInfoTrait};
 
 mod account;
 
@@ -21,14 +21,14 @@ pub trait NewInfo {
 
 /// Account information and storage cost.
 #[derive(BorshSerialize, BorshDeserialize)]
-pub struct Accounts<AccountInfo: BorshSerialize + BorshDeserialize + NewInfo> {
-    pub accounts: UnorderedMap<AccountId, Account<AccountInfo>>,
+pub struct Accounts<AccountInfoUsed: AccountInfoTrait> {
+    pub accounts: UnorderedMap<AccountId, Account<AccountInfoUsed>>,
     pub default_min_storage_bal: u128,
 }
 
-impl<AccountInfo: BorshSerialize + BorshDeserialize + NewInfo> Accounts<AccountInfo> {
+impl<Info: AccountInfoTrait> Accounts<Info> {
     /// Get an account and panic if the account is not registered
-    pub fn get_account_checked(&self, account_id: &AccountId) -> Account<AccountInfo> {
+    pub fn get_account_checked(&self, account_id: &AccountId) -> Account<Info> {
         let account = self.accounts.get(account_id);
         if account.is_none() {
             panic!("Account {} is unregistered", account_id);
@@ -38,12 +38,12 @@ impl<AccountInfo: BorshSerialize + BorshDeserialize + NewInfo> Accounts<AccountI
 
     pub fn check_storage<F, T: Sized>(
         &mut self,
-        account: &mut Account<AccountInfo>,
+        account: &mut Account<Info>,
         account_id: &AccountId,
         closure: F,
     ) -> T
     where
-        F: FnOnce(&mut Accounts<AccountInfo>, &mut Account<AccountInfo>) -> T,
+        F: FnOnce(&mut Accounts<Info>, &mut Account<Info>) -> T,
     {
         let ret = account.check_storage(self, closure);
         self.accounts.insert(&account_id, &account);
@@ -53,34 +53,34 @@ impl<AccountInfo: BorshSerialize + BorshDeserialize + NewInfo> Accounts<AccountI
     pub fn remove_account_unchecked(
         &mut self,
         account_id: &AccountId,
-    ) -> Option<Account<AccountInfo>> {
+    ) -> Option<Account<Info>> {
         self.accounts.remove(account_id)
     }
 
     pub fn insert_account_unchecked(
         &mut self,
         account_id: &AccountId,
-        account: &Account<AccountInfo>,
-    ) -> Option<Account<AccountInfo>> {
+        account: &Account<Info>,
+    ) -> Option<Account<Info>> {
         self.accounts.insert(account_id, account)
     }
 
     pub fn insert_account_check_storage(
         &mut self,
         account_id: &AccountId,
-        account: &mut Account<AccountInfo>,
-    ) -> Option<Account<AccountInfo>> {
+        account: &mut Account<Info>,
+    ) -> Option<Account<Info>> {
         self.check_storage(account, account_id, |accounts, account| {
             accounts.accounts.insert(account_id, account)
         })
     }
 
-    pub fn get_account(&self, account_id: &AccountId) -> Option<Account<AccountInfo>> {
+    pub fn get_account(&self, account_id: &AccountId) -> Option<Account<Info>> {
         self.accounts.get(account_id)
     }
 }
 
-impl<Info: BorshSerialize + BorshDeserialize + NewInfo> Accounts<Info> {
+impl<Info: AccountInfoTrait> Accounts<Info> {
     pub fn new() -> Self {
         let mut ret = Accounts::<Info> {
             accounts: UnorderedMap::new(b"accounts-map".to_vec()),
@@ -91,7 +91,7 @@ impl<Info: BorshSerialize + BorshDeserialize + NewInfo> Accounts<Info> {
     }
 }
 
-impl<Info: BorshSerialize + BorshDeserialize + NewInfo> Accounts<Info> {
+impl<Info: AccountInfoTrait> Accounts<Info> {
     /// Get the cost of storage
     /// * `unregister` - if set to false then the get_storage_cost will also register the default account with the account id
     pub(crate) fn get_storage_cost(
@@ -115,7 +115,7 @@ impl<Info: BorshSerialize + BorshDeserialize + NewInfo> Accounts<Info> {
 }
 
 /// storage handlers
-impl<Info: BorshSerialize + BorshDeserialize + NewInfo> StorageManagement for Accounts<Info> {
+impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
     fn storage_unregister(&mut self, force: Option<bool>) -> bool {
         if force.unwrap_or(false) == false {
             log!("Can only unregister if force is true");
@@ -163,7 +163,10 @@ impl<Info: BorshSerialize + BorshDeserialize + NewInfo> StorageManagement for Ac
     }
 
     fn storage_balance_bounds(&self) -> StorageBalanceBounds {
-        StorageBalanceBounds { min: self.default_min_storage_bal.into(), max: None }
+        StorageBalanceBounds {
+            min: self.default_min_storage_bal.into(),
+            max: None,
+        }
     }
 
     fn storage_balance_of(&self, account_id: ValidAccountId) -> Option<StorageBalance> {
@@ -180,8 +183,9 @@ impl<Info: BorshSerialize + BorshDeserialize + NewInfo> StorageManagement for Ac
         registration_only: Option<bool>,
     ) -> near_contract_standards::storage_management::StorageBalance {
         let registration_only = registration_only.unwrap_or(false);
-        let account_id: AccountId =
-            account_id.map(|a| a.into()).unwrap_or(env::predecessor_account_id());
+        let account_id: AccountId = account_id
+            .map(|a| a.into())
+            .unwrap_or(env::predecessor_account_id());
         let amount_attached = env::attached_deposit();
         let registered = self.accounts.get(&account_id);
 
@@ -202,7 +206,10 @@ impl<Info: BorshSerialize + BorshDeserialize + NewInfo> StorageManagement for Ac
             if amount_attached < storage_cost || amount_attached < min_storage_cost {
                 self.accounts.remove(&account_id);
                 Promise::new(env::predecessor_account_id()).transfer(amount_attached);
-                StorageBalance { available: 0.into(), total: 0.into() }
+                StorageBalance {
+                    available: 0.into(),
+                    total: 0.into(),
+                }
             } else if registration_only {
                 let amount_refund = storage_cost - amount_attached;
                 let mut account = self.accounts.get(&account_id).unwrap();

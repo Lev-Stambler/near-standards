@@ -1,4 +1,4 @@
-use near_account::{Account, Accounts, NewInfo};
+use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo};
 use near_sdk::{
     assert_one_yocto,
     borsh::{BorshDeserialize, BorshSerialize},
@@ -10,6 +10,8 @@ use near_sdk::{
 };
 
 use crate::{BalanceInfo, OnTransferOpts};
+
+pub trait AccountInfoTrait: DefaultAccountInfo + BalanceInfo {}
 
 const RESOLVE_FT_NAME: &str = "resolve_internal_ft_transfer_call";
 const FT_TRANSFER_CALL_METHOD_NAME: &str = "ft_transfer_call";
@@ -24,14 +26,16 @@ const GAS_FOR_FT_TRANSFER_CALL_NEP141: Gas = GAS_FOR_FT_RESOLVE_TRANSFER_NEP141
     + 25_000_000_000_000
     + GAS_BUFFER;
 
-pub fn ft_on_transfer<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
+pub fn ft_on_transfer<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender_id: AccountId,
     amount: String,
     msg: String,
 ) -> String {
     let opts: OnTransferOpts = if (&msg).len() == 0 {
-        OnTransferOpts { sender_id: sender_id.clone().into() }
+        OnTransferOpts {
+            sender_id: sender_id.clone().into(),
+        }
     } else {
         serde_json::from_str(&msg)
             .unwrap_or_else(|e| panic!("Failed to deserialize transfer opts: {}", e))
@@ -43,17 +47,12 @@ pub fn ft_on_transfer<Info: BorshDeserialize + BorshSerialize + BalanceInfo + Ne
     "0".to_string()
 }
 
-pub fn get_ft_balance<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
-    account: &Account<Info>,
-    token_id: &AccountId,
-) -> u128 {
+pub fn get_ft_balance<Info: AccountInfoTrait>(account: &Account<Info>, token_id: &AccountId) -> u128 {
     account.info.get_balance(token_id)
 }
 
 /// Get the cost of adding 1 balance to a user's account
-pub fn get_storage_cost_for_one_balance<
-    Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo,
->(
+pub fn get_storage_cost_for_one_balance<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
 ) -> Balance {
     let account_id = "a".repeat(64);
@@ -62,19 +61,22 @@ pub fn get_storage_cost_for_one_balance<
         &account_id,
         &Account::default_from_account_id(account_id.clone()),
     );
-    let storage_usage_init = env::storage_usage();
+
+    let storage_usage_init_with_account = env::storage_usage();
+
     let mut account = accounts.get_account(&account_id).unwrap();
     account.info.set_balance(&token_id, 0);
     accounts.insert_account_unchecked(&account_id, &account);
+
     let storage_usage = env::storage_usage();
 
     // Remove the inserted account
     accounts.remove_account_unchecked(&account_id);
 
-    return (storage_usage - storage_usage_init) as u128 * env::storage_byte_cost();
+    return (storage_usage - storage_usage_init_with_account) as u128 * env::storage_byte_cost();
 }
 
-pub fn balance_transfer<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
+pub fn balance_transfer<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     recipient: &AccountId,
     token_id: &AccountId,
@@ -90,7 +92,7 @@ pub fn balance_transfer<Info: BorshDeserialize + BorshSerialize + BalanceInfo + 
     increase_balance(accounts, &recipient, token_id, amount);
 }
 
-pub fn withdraw_to<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
+pub fn withdraw_to<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     amount: u128,
     token_id: AccountId,
@@ -101,7 +103,11 @@ pub fn withdraw_to<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewIn
     let caller = env::predecessor_account_id();
 
     // TODO: in sep function
-    assert_eq!(env::attached_deposit(), 1, "Expected an attached deposit of 1");
+    assert_eq!(
+        env::attached_deposit(),
+        1,
+        "Expected an attached deposit of 1"
+    );
 
     let recipient = recipient.unwrap_or(caller.clone());
 
@@ -109,7 +115,7 @@ pub fn withdraw_to<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewIn
     env::promise_return(prom);
 }
 
-fn internal_ft_transfer<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
+fn internal_ft_transfer<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender: &AccountId,
     token_id: &AccountId,
@@ -157,7 +163,7 @@ fn internal_ft_transfer<Info: BorshDeserialize + BorshSerialize + BalanceInfo + 
 }
 
 // TODO: integrate
-fn internal_ft_transfer_call<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
+fn internal_ft_transfer_call<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     token_id: &AccountId,
     recipient: AccountId,
@@ -180,7 +186,7 @@ fn internal_ft_transfer_call<Info: BorshDeserialize + BorshSerialize + BalanceIn
 /// Do an internal transfer and subtract the internal balance for {@param sender}
 ///
 /// If there is a custom message, use that for the ft transfer. If not, use the default On Transfer Message
-fn _internal_ft_transfer_call<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
+fn _internal_ft_transfer_call<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     token_id: &AccountId,
     recipient: AccountId,
@@ -232,9 +238,7 @@ fn _internal_ft_transfer_call<Info: BorshDeserialize + BorshSerialize + BalanceI
 /// Resolve the ft transfer by updating the amount used in the balances
 /// `is_ft_call` - If false, assume that an ft_transfer occurred
 /// @returns the amount used
-pub fn resolve_internal_ft_transfer_call<
-    Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo,
->(
+pub fn resolve_internal_ft_transfer_call<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     account_id: &AccountId,
     token_id: AccountId,
@@ -276,7 +280,7 @@ pub fn resolve_internal_ft_transfer_call<
     }
 }
 
-pub fn increase_balance<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
+pub fn increase_balance<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     account_id: &AccountId,
     token_id: &AccountId,
@@ -298,7 +302,7 @@ pub fn increase_balance<Info: BorshDeserialize + BorshSerialize + BalanceInfo + 
     accounts.insert_account_check_storage(account_id, &mut account);
 }
 
-pub fn subtract_balance<Info: BorshDeserialize + BorshSerialize + BalanceInfo + NewInfo>(
+pub fn subtract_balance<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     account_id: &AccountId,
     token_id: &AccountId,
@@ -342,9 +346,13 @@ fn get_transfer_data(
     custom_message: Option<String>,
 ) -> Vec<u8> {
     if let Some(msg) = custom_message {
-        json!({"receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
+        json!({"receiver_id": recipient, "amount": amount, "msg": msg})
+            .to_string()
+            .into_bytes()
     } else {
-        json!({"receiver_id": recipient, "amount": amount}).to_string().into_bytes()
+        json!({"receiver_id": recipient, "amount": amount})
+            .to_string()
+            .into_bytes()
     }
 }
 
@@ -355,7 +363,9 @@ fn get_transfer_call_data(
     custom_message: Option<String>,
 ) -> Vec<u8> {
     if let Some(msg) = custom_message {
-        json!({ "receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
+        json!({ "receiver_id": recipient, "amount": amount, "msg": msg})
+            .to_string()
+            .into_bytes()
     } else {
         let on_transfer_opts = OnTransferOpts { sender_id: sender };
         // TODO: unwrapping ok?
@@ -406,14 +416,22 @@ mod tests {
 
     fn get_near_accounts(
         mut context: VMContextBuilder,
-    ) -> (AccountId, AccountId, Accounts<Info>, Account<Info>, VMContextBuilder) {
+    ) -> (
+        AccountId,
+        AccountId,
+        Accounts<Info>,
+        Account<Info>,
+        VMContextBuilder,
+    ) {
         let mut near_accounts = Accounts::<Info>::new();
         let account: AccountId = accounts(0).into();
         let tok: AccountId = accounts(2).into();
         let min = near_accounts.storage_balance_bounds().min.0;
         testing_env!(context.attached_deposit(min * 10).build());
-        near_accounts
-            .storage_deposit(Some(ValidAccountId::try_from(account.clone()).unwrap()), None);
+        near_accounts.storage_deposit(
+            Some(ValidAccountId::try_from(account.clone()).unwrap()),
+            None,
+        );
         testing_env!(context.attached_deposit(1).build());
         let near_account = near_accounts.get_account_checked(&account);
 
@@ -453,7 +471,12 @@ mod tests {
         testing_env!(context.build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
 
-        ft_on_transfer(&mut near_accounts, account.clone(), 1000.to_string(), "".to_string());
+        ft_on_transfer(
+            &mut near_accounts,
+            account.clone(),
+            1000.to_string(),
+            "".to_string(),
+        );
         let near_account = near_accounts.get_account_checked(&account);
         let bal = get_ft_balance(&near_account, &tok);
         assert_eq!(bal, 1_000);
@@ -478,8 +501,12 @@ mod tests {
         let bal = get_ft_balance(&near_account, &tok);
         assert_eq!(bal, 0);
 
-        let amount_unused =
-            ft_on_transfer(&mut near_accounts, account.clone(), 1000.to_string(), "".to_string());
+        let amount_unused = ft_on_transfer(
+            &mut near_accounts,
+            account.clone(),
+            1000.to_string(),
+            "".to_string(),
+        );
         assert_eq!(amount_unused, "0");
 
         let near_account = near_accounts.get_account_checked(&account);
@@ -490,7 +517,10 @@ mod tests {
             &mut near_accounts,
             accounts(1).into(),
             100.to_string(),
-            serde_json::to_string(&OnTransferOpts { sender_id: account.clone() }).unwrap(),
+            serde_json::to_string(&OnTransferOpts {
+                sender_id: account.clone(),
+            })
+            .unwrap(),
         );
 
         assert_eq!(amount_unused, "0");

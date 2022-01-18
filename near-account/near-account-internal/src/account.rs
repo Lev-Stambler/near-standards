@@ -8,16 +8,18 @@ use near_sdk::{
 
 use crate::{Accounts, NewInfo};
 
+pub trait AccountInfoTrait: BorshSerialize + BorshDeserialize + NewInfo {}
+
 /// Account information and storage cost.
-#[derive(BorshSerialize, BorshDeserialize, Default)]
-pub struct Account<Info: BorshSerialize + BorshDeserialize + NewInfo> {
+#[derive(BorshSerialize, BorshDeserialize, Default, Debug)]
+pub struct Account<Info: AccountInfoTrait> {
     /// Native NEAR amount sent to the contract
     pub near_amount: Balance,
     pub near_used_for_storage: Balance,
     pub info: Info,
 }
 
-impl<Info: BorshSerialize + BorshDeserialize + NewInfo> NewInfo for Account<Info> {
+impl<Info: AccountInfoTrait> NewInfo for Account<Info> {
     fn default_from_account_id(account_id: AccountId) -> Self {
         Self {
             near_amount: 0,
@@ -27,7 +29,7 @@ impl<Info: BorshSerialize + BorshDeserialize + NewInfo> NewInfo for Account<Info
     }
 }
 
-pub trait AccountDeposits<Info: BorshDeserialize + BorshSerialize + NewInfo> {
+pub trait AccountDeposits<Info: AccountInfoTrait> {
     /// Check that storage is paid for and call the closure function
     fn check_storage<F, T: Sized>(&mut self, accounts: &mut Accounts<Info>, closure: F) -> T
     where
@@ -44,7 +46,7 @@ pub trait AccountDeposits<Info: BorshDeserialize + BorshSerialize + NewInfo> {
     fn near_withdraw(&mut self, account_id: AccountId, amount: Option<u128>) -> StorageBalance;
 }
 
-impl<Info: BorshDeserialize + BorshSerialize + NewInfo> AccountDeposits<Info> for Account<Info> {
+impl<Info: AccountInfoTrait> AccountDeposits<Info> for Account<Info> {
     fn check_storage<F, T: Sized>(&mut self, accounts: &mut Accounts<Info>, closure: F) -> T
     where
         F: FnOnce(&mut Accounts<Info>, &mut Self) -> T,
