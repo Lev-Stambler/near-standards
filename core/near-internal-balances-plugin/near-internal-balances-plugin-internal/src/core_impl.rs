@@ -1,3 +1,4 @@
+use crate::ft::ft_withdraw_to;
 use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo};
 use near_sdk::{
     assert_one_yocto,
@@ -47,6 +48,28 @@ pub fn get_storage_cost_for_one_balance<Info: AccountInfoTrait>(
     accounts.remove_account_unchecked(&account_id);
 
     return (storage_usage - storage_usage_init_with_account) as u128 * env::storage_byte_cost();
+}
+
+pub fn withdraw_to<Info: AccountInfoTrait>(
+    accounts: &mut Accounts<Info>,
+    recipient: &Option<AccountId>,
+    token_id: &TokenId,
+    amount: u128,
+    msg: Option<String>,
+) {
+    assert_one_yocto();
+    let caller = env::predecessor_account_id();
+    match token_id {
+        TokenId::FT { contract_id } => {
+            ft_withdraw_to(accounts, amount, contract_id.to_string(), recipient, msg)
+        }
+        TokenId::MT { contract_id, token_id } => {
+            todo!()
+        }
+        TokenId::NFT { contract_id, token_id } => {
+            todo!()
+        }
+    }
 }
 
 pub fn balance_transfer<Info: AccountInfoTrait>(

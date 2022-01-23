@@ -1,0 +1,13 @@
+  
+[package]
+name = "multi-token"
+version = "0.0.1"
+authors = ["Ships Gold zane@ships.gold"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "4.0.0-pre.2"
+multi-token-standard = { path = "../../../multi_token" }

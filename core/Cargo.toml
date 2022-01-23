@@ -12,6 +12,7 @@ near-contract-standards = "3.1.0"
 # remember to include a line for each contract
 dummy = { path = "./dummy" }
 ft = { path = "./ft" }
+mt = { path = "./multi-token-standard-impl/examples/multi-token/mt" }
 
 [profile.release]
 codegen-units = 1
@@ -24,8 +25,4 @@ overflow-checks = true
 
 [workspace]
 # remember to include a member for each contract
-members = [
-  "near-account",
-  "dummy",
-  "near-internal-balances-plugin"
-]
+members = ["near-account", "dummy", "near-internal-balances-plugin"]

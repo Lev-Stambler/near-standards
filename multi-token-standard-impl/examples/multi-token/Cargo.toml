@@ -1,0 +1,32 @@
+[package]
+name = "multi-token-wrapper"
+version = "0.0.1"
+authors = ["zane@ships.gold"]
+edition = "2018"
+
+[dev-dependencies]
+multi-token-standard = { path = "../../multi_token" }
+near-sdk = "4.0.0-pre.2" 
+near-sdk-sim = "4.0.0-pre.2"
+rand = "0.8.4"
+
+# remember to include a line for each contract
+multi-token = { path = "./mt" }
+token-receiver = { path = "./test-token-receiver" }
+
+[profile.release]
+codegen-units = 1
+# Tell `rustc` to optimize for small code size.
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
+
+[workspace]
+# remember to include a member for each contract
+members = [
+  "mt",
+  "test-token-receiver"
+]
+

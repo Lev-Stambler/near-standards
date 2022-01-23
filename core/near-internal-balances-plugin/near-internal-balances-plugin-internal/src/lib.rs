@@ -40,9 +40,9 @@ pub trait SudoInternalBalanceHandlers {
     /// Do a checked addition to an account balance
     fn increase_balance(&mut self, account_id: &AccountId, token_id: &TokenId, amount: Balance);
     /// Same as get_ft_balance but without the serializable types
-    fn get_ft_balance_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance;
+    fn get_balance_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance;
     /// Get the storage cost for one balance account
-    fn get_storage_cost_for_one_balance(&mut self) -> Balance;
+    fn get_storage_cost_for_one_balance(&mut self, token_id: &TokenId) -> Balance;
     /// Same as balance transfer but internal types
     fn balance_transfer_internal(
         &mut self,
@@ -55,6 +55,8 @@ pub trait SudoInternalBalanceHandlers {
 
 pub trait InternalBalanceHandlers {
     fn ft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
+    // TODO:
+    // fn nft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
     fn get_internal_balance(&self, account_id: ValidAccountId, token_id: ValidTokenId) -> U128;
     fn resolve_internal_ft_withdraw_call(
         &mut self,
@@ -63,7 +65,8 @@ pub trait InternalBalanceHandlers {
         amount: U128,
         is_ft_call: bool,
     ) -> U128;
-    fn ft_withdraw_to(
+
+    fn withdraw_to(
         &mut self,
         amount: U128,
         token_id: ValidTokenId,
