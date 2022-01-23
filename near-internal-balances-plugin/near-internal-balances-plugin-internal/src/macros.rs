@@ -2,8 +2,8 @@
 macro_rules! impl_near_balance_plugin {
     ($contract_struct: ident, $accounts: ident, $info_struct: ident, $balance_map: ident) => {
         use $crate::{
-            BalanceInfo, InternalBalanceFungibleTokenHandlers, NearFTInternalBalance,
-            SudoInternalBalanceFungibleToken,
+            BalanceInfo, InternalBalanceHandlers, NearFTInternalBalance,
+            SudoInternalBalanceHandlers,
         };
 
         impl $crate::BalanceInfo for $info_struct {
@@ -19,7 +19,7 @@ macro_rules! impl_near_balance_plugin {
         impl $crate::core_impl::AccountInfoTrait for $info_struct {
         }
 
-        impl SudoInternalBalanceFungibleToken for $contract_struct {
+        impl SudoInternalBalanceHandlers for $contract_struct {
             fn subtract_balance(
                 &mut self,
                 account_id: &AccountId,
@@ -81,7 +81,7 @@ macro_rules! impl_near_balance_plugin {
         }
 
         #[near_bindgen]
-        impl InternalBalanceFungibleTokenHandlers for $contract_struct {
+        impl InternalBalanceHandlers for $contract_struct {
             fn ft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String {
                 $crate::core_impl::ft_on_transfer(&mut self.$accounts, sender_id, amount, msg)
             }
@@ -98,14 +98,14 @@ macro_rules! impl_near_balance_plugin {
             /// A private contract function which resolves the ft transfer by updating the amount used in the balances
             /// @returns the amount used
             #[private]
-            fn resolve_internal_ft_transfer_call(
+            fn resolve_internal_ft_withdraw_call(
                 &mut self,
                 account_id: ValidAccountId,
                 token_id: ValidAccountId,
                 amount: U128,
                 is_ft_call: bool,
             ) -> U128 {
-                $crate::core_impl::resolve_internal_ft_transfer_call(
+                $crate::core_impl::resolve_internal_ft_withdraw_call(
                     &mut self.$accounts,
                     &account_id.into(),
                     token_id.into(),
