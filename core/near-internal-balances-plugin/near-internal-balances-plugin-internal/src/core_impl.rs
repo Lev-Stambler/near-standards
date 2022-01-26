@@ -54,9 +54,9 @@ pub fn get_storage_cost_for_one_balance<Info: AccountInfoTrait>(
 
 pub fn withdraw_to<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
-    recipient: Option<AccountId>,
-    token_id: &TokenId,
     amount: u128,
+    token_id: &TokenId,
+    recipient: Option<AccountId>,
     msg: Option<String>,
 ) {
     assert_one_yocto();

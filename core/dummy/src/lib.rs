@@ -1,20 +1,19 @@
-use near_account::{AccountDeposits, Accounts, NearAccounts, NewInfo};
+use near_account::{AccountDeposits, AccountInfoTrait, Accounts, NearAccounts, NewInfo};
 use near_internal_balances_plugin::impl_near_balance_plugin;
 
 use near_contract_standards::storage_management::StorageManagement;
+use near_internal_balances_plugin::token_id::TokenId;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LazyOption, UnorderedMap};
-use near_sdk::json_types::{ValidAccountId, U128};
+use near_sdk::json_types::U128;
 use near_sdk::{
     assert_one_yocto, env, log, near_bindgen, AccountId, Balance, PanicOnDefault, PromiseOrValue,
 };
 
-near_sdk::setup_alloc!();
-
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct AccountInfo {
     pub message: String,
-    pub internal_balance: UnorderedMap<AccountId, Balance>,
+    pub internal_balance: UnorderedMap<TokenId, Balance>,
 }
 
 impl NewInfo for AccountInfo {
@@ -25,6 +24,8 @@ impl NewInfo for AccountInfo {
         }
     }
 }
+
+impl AccountInfoTrait for AccountInfo {}
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, NearAccounts)]
@@ -52,7 +53,7 @@ impl Contract {
         self.accounts.insert_account_check_storage(&caller, account);
     }
 
-    pub fn get_message(&self, account_id: ValidAccountId) -> String {
+    pub fn get_message(&self, account_id: AccountId) -> String {
         let account = self.accounts.get_account(&account_id.into());
         account.map(|a| a.info.message).unwrap_or("".to_string())
     }

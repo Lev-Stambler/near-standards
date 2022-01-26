@@ -1,4 +1,4 @@
-use near_account::{Accounts, Account};
+use near_account::{Account, Accounts};
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
@@ -11,11 +11,11 @@ use near_sdk::{
 };
 
 pub mod core_impl;
-mod ft;
+pub mod ft;
 mod macros;
 mod mt;
 mod nft;
-mod token_id;
+pub mod token_id;
 pub use macros::*;
 use token_id::TokenId;
 
@@ -41,7 +41,7 @@ pub trait SudoInternalBalanceHandlers {
     /// Same as get_ft_balance but without the serializable types
     fn get_balance_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance;
     /// Get the storage cost for one balance account
-    fn get_storage_cost_for_one_balance(&mut self, token_id: &TokenId) -> Balance;
+    fn get_storage_cost_for_one_balance(&mut self, token_id: TokenId) -> Balance;
     /// Same as balance transfer but internal types
     fn balance_transfer_internal(
         &mut self,
@@ -53,14 +53,14 @@ pub trait SudoInternalBalanceHandlers {
 }
 
 pub trait InternalBalanceHandlers {
-    fn ft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
+    fn ft_on_transfer(&mut self, sender_id: AccountId, amount: String, msg: String) -> String;
     // TODO:
     // fn nft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
-    fn get_internal_balance(&self, account_id: AccountId, token_id: AccountId) -> U128;
+    fn get_internal_balance(&self, account_id: AccountId, token_id: TokenId) -> U128;
     fn resolve_internal_ft_withdraw_call(
         &mut self,
         account_id: AccountId,
-        token_id: TokenId,
+        token_id: AccountId,
         amount: U128,
         is_ft_call: bool,
     ) -> U128;

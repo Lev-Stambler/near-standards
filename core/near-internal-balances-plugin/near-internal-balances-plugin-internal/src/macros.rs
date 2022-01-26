@@ -7,11 +7,11 @@ macro_rules! impl_near_balance_plugin {
         };
 
         impl $crate::BalanceInfo for $info_struct {
-            fn get_balance(&self, token_id: &AccountId) -> Balance {
+            fn get_balance(&self, token_id: &$crate::token_id::TokenId) -> Balance {
                 self.$balance_map.get(token_id).unwrap_or(0)
             }
 
-            fn set_balance(&mut self, token_id: &AccountId, balance: Balance) {
+            fn set_balance(&mut self, token_id: &$crate::token_id::TokenId, balance: Balance) {
                 self.$balance_map.insert(token_id, &balance);
             }
         }
@@ -33,8 +33,11 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
 
-            fn get_storage_cost_for_one_balance(&mut self, token_id: &TokenId) -> Balance {
-                $crate::core_impl::get_storage_cost_for_one_balance(&mut self.$accounts, token_id)
+            fn get_storage_cost_for_one_balance(&mut self, token_id: TokenId) -> Balance {
+                $crate::core_impl::get_storage_cost_for_one_balance(
+                    &mut self.$accounts,
+                    token_id,
+                )
             }
 
             fn increase_balance(
@@ -54,7 +57,7 @@ macro_rules! impl_near_balance_plugin {
             fn get_balance_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance {
                 self.$accounts
                     .get_account(&account_id)
-                    .map(|a| $crate::core_impl::get_balance(&a, &token_id))
+                    .map(|a| $crate::core_impl::get_internal_balance(&a, &token_id))
                     .unwrap_or(0)
             }
 
@@ -77,15 +80,20 @@ macro_rules! impl_near_balance_plugin {
 
         #[near_bindgen]
         impl InternalBalanceHandlers for $contract_struct {
-            fn ft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String {
-                $crate::core_impl::ft_on_transfer(&mut self.$accounts, sender_id, amount, msg)
+            fn ft_on_transfer(
+                &mut self,
+                sender_id: AccountId,
+                amount: String,
+                msg: String,
+            ) -> String {
+                $crate::ft::ft_on_transfer(&mut self.$accounts, sender_id, amount, msg)
             }
 
-            fn get_balance(&self, account_id: AccountId, token_id: ValidTokenId) -> U128 {
+            fn get_internal_balance(&self, account_id: AccountId, token_id: TokenId) -> U128 {
                 let bal = self
                     .$accounts
                     .get_account(&account_id.into())
-                    .map(|a| $crate::core_impl::get_balance(&a, &token_id.into()))
+                    .map(|a| $crate::core_impl::get_internal_balance(&a, &token_id.into()))
                     .unwrap_or(0);
                 U128::from(bal)
             }
@@ -100,10 +108,10 @@ macro_rules! impl_near_balance_plugin {
                 amount: U128,
                 is_ft_call: bool,
             ) -> U128 {
-                $crate::core_impl::resolve_internal_ft_withdraw_call(
+                $crate::ft::resolve_internal_ft_withdraw_call(
                     &mut self.$accounts,
                     &account_id.into(),
-                    token_id.into(),
+                    token_id,
                     amount,
                     is_ft_call,
                 )
@@ -113,31 +121,26 @@ macro_rules! impl_near_balance_plugin {
             fn balance_transfer(
                 &mut self,
                 recipient: AccountId,
-                token_id: ValidTokenId,
+                token_id: $crate::token_id::TokenId,
                 amount: U128,
                 message: Option<String>,
             ) {
-                self.balance_transfer_internal(
-                    recipient.into(),
-                    token_id.into(),
-                    amount.into(),
-                    message,
-                )
+                self.balance_transfer_internal(recipient.into(), token_id, amount.into(), message)
             }
 
             #[payable]
             fn withdraw_to(
                 &mut self,
                 amount: U128,
-                token_id: ValidTokenId,
+                token_id: $crate::token_id::TokenId,
                 recipient: Option<AccountId>,
                 msg: Option<String>,
             ) {
                 $crate::core_impl::withdraw_to(
                     &mut self.$accounts,
                     amount.into(),
-                    token_id.into(),
-                    recipient.map(|r| r.into()),
+                    &token_id,
+                    recipient,
                     msg,
                 )
             }

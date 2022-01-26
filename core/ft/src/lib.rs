@@ -15,6 +15,8 @@ NOTES:
   - To prevent the deployed contract from being modified or deleted, it should not have any access
     keys on its account.
 */
+use std::str::FromStr;
+
 use near_contract_standards::fungible_token::metadata::{
     FungibleTokenMetadata, FungibleTokenMetadataProvider, FT_METADATA_SPEC,
 };
@@ -59,19 +61,15 @@ impl Contract {
     /// Initializes the contract with the given total supply owned by the given `owner_id` with
     /// the given fungible token metadata.
     #[init]
-    pub fn new(
-        owner_id: ValidAccountId,
-        total_supply: U128,
-        metadata: FungibleTokenMetadata,
-    ) -> Self {
+    pub fn new(owner_id: AccountId, total_supply: U128, metadata: FungibleTokenMetadata) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         metadata.assert_valid();
         let mut this = Self {
             token: FungibleToken::new(b"a".to_vec()),
             metadata: LazyOption::new(b"m".to_vec(), Some(&metadata)),
         };
-        this.token.internal_register_account(owner_id.as_ref());
-        this.token.internal_deposit(owner_id.as_ref(), total_supply.into());
+        this.token.internal_register_account(&owner_id);
+        this.token.internal_deposit(&owner_id, total_supply.into());
         this
     }
 
