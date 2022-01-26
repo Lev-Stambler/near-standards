@@ -1,10 +1,7 @@
 #[macro_export]
 macro_rules! impl_near_balance_plugin {
     ($contract_struct: ident, $accounts: ident, $info_struct: ident, $balance_map: ident) => {
-        use $crate::{
-            BalanceInfo, NearFTInternalBalance,
-            SudoInternalBalanceHandlers,
-        };
+        use $crate::{BalanceInfo, NearFTInternalBalance, SudoInternalBalanceHandlers};
 
         pub use $crate::InternalBalanceHandlers;
 
@@ -104,7 +101,11 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
 
-            fn internal_balance_get_balance(&self, account_id: AccountId, token_id: TokenId) -> U128 {
+            fn internal_balance_get_balance(
+                &self,
+                account_id: AccountId,
+                token_id: TokenId,
+            ) -> U128 {
                 let bal = self
                     .$accounts
                     .get_account(&account_id.into())
@@ -113,26 +114,6 @@ macro_rules! impl_near_balance_plugin {
                 U128::from(bal)
             }
 
-            /// A private contract function which resolves the ft transfer by updating the amount used in the balances
-            /// @returns the amount used
-            #[private]
-            fn resolve_internal_withdraw_call(
-                &mut self,
-                account_id: AccountId,
-                token_id: $crate::token_id::TokenId,
-                amount: U128,
-                is_ft_call: bool,
-            ) -> U128 {
-                $crate::core_impl::resolve_internal_withdraw_call(
-                    &mut self.$accounts,
-                    &account_id.into(),
-                    token_id,
-                    amount,
-                    is_ft_call,
-                )
-            }
-
-            #[payable]
             fn internal_balance_transfer(
                 &mut self,
                 recipient: AccountId,
@@ -140,7 +121,12 @@ macro_rules! impl_near_balance_plugin {
                 amount: U128,
                 message: Option<String>,
             ) {
-                self.internal_balance_transfer_internal(recipient.into(), token_id, amount.into(), message)
+                self.internal_balance_transfer_internal(
+                    recipient.into(),
+                    token_id,
+                    amount.into(),
+                    message,
+                )
             }
 
             #[payable]
@@ -157,6 +143,25 @@ macro_rules! impl_near_balance_plugin {
                     &token_id,
                     recipient,
                     msg,
+                )
+            }
+
+            /// A private contract function which resolves the ft transfer by updating the amount used in the balances
+            /// @returns the amount used
+            #[private]
+            fn resolve_internal_withdraw_call(
+                &mut self,
+                account_id: AccountId,
+                token_id: $crate::token_id::TokenId,
+                amount: U128,
+                is_call: bool,
+            ) -> U128 {
+                $crate::core_impl::resolve_internal_withdraw_call(
+                    &mut self.$accounts,
+                    &account_id.into(),
+                    token_id,
+                    amount,
+                    is_call,
                 )
             }
         }

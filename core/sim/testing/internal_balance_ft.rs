@@ -62,7 +62,7 @@ fn simulate_ft_simple_internal_balances_test_with_sender_id() {
         ),
         deposit = 1
     );
-    println!("AA {:?}", ret.logs());
+    println!("BBB {:?}", ret.logs());
     ret.assert_success();
 
     let ft_bal_alice_internal: U128 =

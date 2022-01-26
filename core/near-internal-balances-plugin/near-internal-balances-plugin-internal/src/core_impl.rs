@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::ft::ft_internal_balance_withdraw_to;
+use crate::{ft::ft_internal_balance_withdraw_to, nft::nft_internal_balance_withdraw_to};
 use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo};
 use near_sdk::{
     assert_one_yocto,
@@ -16,7 +16,7 @@ use crate::{token_id::TokenId, BalanceInfo, OnTransferOpts};
 
 pub trait AccountInfoTrait: DefaultAccountInfo + BalanceInfo {}
 
-pub const RESOLVE_WITHDRAW_NAME: &str = "resolve_internal_ft_withdraw_call";
+pub const RESOLVE_WITHDRAW_NAME: &str = "resolve_internal_withdraw_call";
 pub const GAS_BUFFER: Gas = Gas(5_000_000_000_000u64);
 pub const GAS_FOR_INTERNAL_RESOLVE: Gas = Gas(5_000_000_000_000u64);
 
@@ -27,9 +27,8 @@ pub fn internal_balance_get_balance<Info: AccountInfoTrait>(
     account.info.get_balance(token_id)
 }
 
-
 /// Resolve the ft transfer by updating the amount used in the balances
-/// `is_ft_call` - If false, assume that an ft_transfer occurred
+/// `is_call` - If false, assume that an ft_transfer occurred
 /// @returns the amount used
 pub fn resolve_internal_withdraw_call<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
@@ -78,7 +77,8 @@ pub fn get_internal_resolve_data(
     amount: U128,
     is_call: bool,
 ) -> Result<String, serde_json::error::Error> {
-    let internal_resolve_args = json!({"account_id": sender, "token_id": token_id, "amount": amount, "is_call": is_call});
+    let internal_resolve_args =
+        json!({"account_id": sender, "token_id": token_id, "amount": amount, "is_call": is_call});
     Ok(internal_resolve_args.to_string())
 }
 
@@ -116,6 +116,7 @@ pub fn internal_balance_withdraw_to<Info: AccountInfoTrait>(
     msg: Option<String>,
 ) {
     assert_one_yocto();
+    log!("AAAAAAAAAAA");
     let caller = env::predecessor_account_id();
     match token_id {
         TokenId::FT { contract_id } => {
@@ -124,9 +125,13 @@ pub fn internal_balance_withdraw_to<Info: AccountInfoTrait>(
         TokenId::MT { contract_id, token_id } => {
             todo!()
         }
-        TokenId::NFT { contract_id, token_id } => {
-            todo!()
-        }
+        TokenId::NFT { contract_id, token_id } => nft_internal_balance_withdraw_to(
+            accounts,
+            contract_id.clone(),
+            token_id.clone(),
+            recipient,
+            msg,
+        ),
     }
 }
 

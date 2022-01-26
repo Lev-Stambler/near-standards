@@ -7,7 +7,7 @@ use near_sdk::{
     json_types::U128,
     log,
     serde::{Deserialize, Serialize},
-    AccountId, Balance, Promise,
+    AccountId, Balance, Promise, PromiseOrValue,
 };
 
 pub mod core_impl;
@@ -80,7 +80,7 @@ pub trait InternalBalanceHandlers {
         token_id: TokenId,
         recipient: Option<AccountId>,
         msg: Option<String>,
-    );
+    ) -> ();
 
     fn internal_balance_transfer(
         &mut self,
