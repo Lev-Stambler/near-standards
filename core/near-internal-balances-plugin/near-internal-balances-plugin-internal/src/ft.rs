@@ -9,19 +9,19 @@ use near_sdk::{
 
 use crate::{
     core_impl::{
-        increase_balance, subtract_balance, AccountInfoTrait, GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE,
+        get_internal_resolve_data, increase_balance, subtract_balance, AccountInfoTrait,
+        GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE, RESOLVE_WITHDRAW_NAME,
     },
     token_id::TokenId,
     OnTransferOpts,
 };
 
-const RESOLVE_FT_NAME: &str = "resolve_internal_ft_withdraw_call";
 const FT_TRANSFER_CALL_METHOD_NAME: &str = "ft_transfer_call";
 const FT_TRANSFER_METHOD_NAME: &str = "ft_transfer";
 
 const GAS_FOR_FT_RESOLVE_TRANSFER_NEP141: Gas = Gas(5_000_000_000_000);
 const GAS_FOR_ON_TRANSFER_NEP141: Gas = Gas(5_000_000_000_000);
-const GAS_FOR_FT_TRANSFER_CALL_NEP141: Gas =  Gas(25_000_000_000_000 + 3 * 5_000_000_000_000);
+const GAS_FOR_FT_TRANSFER_CALL_NEP141: Gas = Gas(25_000_000_000_000 + 3 * 5_000_000_000_000);
 
 pub fn ft_on_transfer<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
@@ -96,12 +96,17 @@ fn internal_ft_withdraw<Info: AccountInfoTrait>(
             GAS_FOR_FT_TRANSFER_CALL_NEP141,
         ),
     };
-    let internal_resolve_args =
-        get_internal_resolve_data(&sender, token_id, U128::from(amount), false).unwrap();
+    let internal_resolve_args = get_internal_resolve_data(
+        &sender,
+        &TokenId::new_ft(token_id.clone()),
+        U128::from(amount),
+        false,
+    )
+    .unwrap();
     env::promise_then(
         ft_transfer_prom,
         env::current_account_id(),
-        RESOLVE_FT_NAME,
+        RESOLVE_WITHDRAW_NAME,
         internal_resolve_args.to_string().as_bytes(),
         0,
         GAS_FOR_INTERNAL_RESOLVE,
@@ -175,84 +180,16 @@ fn _internal_ft_withdraw_call<Info: AccountInfoTrait>(
         ),
     };
     let internal_resolve_args =
-        get_internal_resolve_data(&sender, &token_id, amount, true).unwrap();
+        get_internal_resolve_data(&sender, &TokenId::new_ft(token_id.clone()), amount, true)
+            .unwrap();
     env::promise_then(
         ft_transfer_prom,
         env::current_account_id(),
-        RESOLVE_FT_NAME,
+        RESOLVE_WITHDRAW_NAME,
         internal_resolve_args.to_string().as_bytes(),
         0,
         GAS_FOR_INTERNAL_RESOLVE,
     )
-}
-
-/// Resolve the ft transfer by updating the amount used in the balances
-/// `is_ft_call` - If false, assume that an ft_transfer occurred
-/// @returns the amount used
-pub fn resolve_internal_ft_withdraw_call<Info: AccountInfoTrait>(
-    accounts: &mut Accounts<Info>,
-    account_id: &AccountId,
-    token_id: AccountId,
-    amount: U128,
-    is_ft_call: bool,
-) -> U128 {
-    let amount: u128 = amount.into();
-    if amount == 0 {
-        return U128(0);
-    }
-    let token_id = &TokenId::new_ft(token_id);
-
-    // let account = accounts.get_account_checked(account_id);
-    match near_sdk::utils::promise_result_as_success() {
-        None => {
-            log!("The FT transfer call failed, redepositing funds");
-            increase_balance(accounts, account_id, token_id, amount);
-            U128(0)
-        }
-        Some(data) => {
-            let amount_used = if is_ft_call {
-                let amount_used_str: String = serde_json::from_slice(data.as_slice())
-                    .unwrap_or_else(|e| {
-                        panic!("Failed to deserialize ft_transfer_call result {}", e)
-                    });
-                amount_used_str
-                    .parse::<u128>()
-                    .unwrap_or_else(|e| panic!("Failed to parse result with {}", e))
-            } else {
-                amount
-            };
-            // TODO: err handling?
-            let amount_unused = amount - amount_used;
-            log!("Amount unused {}", amount_unused);
-            if amount_unused > 0 {
-                increase_balance(accounts, account_id, &token_id, amount_unused);
-            }
-            U128(amount_used)
-        }
-    }
-}
-
-fn get_internal_resolve_data(
-    sender: &AccountId,
-    token_id: &AccountId,
-    amount: U128,
-    is_ft_call: bool,
-) -> Result<String, serde_json::error::Error> {
-    let internal_resolve_args = json!({"account_id": sender, "token_id": token_id, "amount": amount, "is_ft_call": is_ft_call});
-    Ok(internal_resolve_args.to_string())
-}
-
-fn get_transfer_data(
-    recipient: AccountId,
-    amount: U128,
-    sender: AccountId,
-    custom_message: Option<String>,
-) -> Vec<u8> {
-    if let Some(msg) = custom_message {
-        json!({"receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
-    } else {
-        json!({"receiver_id": recipient, "amount": amount}).to_string().into_bytes()
-    }
 }
 
 fn get_transfer_call_data(
@@ -417,5 +354,18 @@ mod tests {
         let tok_id = TokenId::new_ft(tok.clone());
         let bal = get_internal_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_100);
+    }
+}
+
+fn get_transfer_data(
+    recipient: AccountId,
+    amount: U128,
+    sender: AccountId,
+    custom_message: Option<String>,
+) -> Vec<u8> {
+    if let Some(msg) = custom_message {
+        json!({"receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
+    } else {
+        json!({"receiver_id": recipient, "amount": amount}).to_string().into_bytes()
     }
 }

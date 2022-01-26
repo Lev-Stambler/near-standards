@@ -12,9 +12,9 @@ use near_sdk::{
 
 pub mod core_impl;
 pub mod ft;
-mod macros;
 mod mt;
-mod nft;
+pub mod nft;
+mod macros;
 pub mod token_id;
 pub use macros::*;
 pub use token_id::TokenId;
@@ -54,15 +54,24 @@ pub trait SudoInternalBalanceHandlers {
 
 pub trait InternalBalanceHandlers {
     fn ft_on_transfer(&mut self, sender_id: AccountId, amount: String, msg: String) -> String;
+
+    fn nft_on_transfer(
+        &mut self,
+        sender_id: AccountId,
+        previous_owner_id: AccountId,
+        token_id: String,
+        msg: String,
+    ) -> bool;
+
     // TODO:
     // fn nft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
     fn get_internal_balance(&self, account_id: AccountId, token_id: TokenId) -> U128;
-    fn resolve_internal_ft_withdraw_call(
+    fn resolve_internal_withdraw_call(
         &mut self,
         account_id: AccountId,
-        token_id: AccountId,
+        token_id: TokenId,
         amount: U128,
-        is_ft_call: bool,
+        is_call: bool,
     ) -> U128;
 
     fn withdraw_to(

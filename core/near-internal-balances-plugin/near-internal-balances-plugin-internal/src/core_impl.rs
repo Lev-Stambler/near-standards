@@ -16,6 +16,7 @@ use crate::{token_id::TokenId, BalanceInfo, OnTransferOpts};
 
 pub trait AccountInfoTrait: DefaultAccountInfo + BalanceInfo {}
 
+pub const RESOLVE_WITHDRAW_NAME: &str = "resolve_internal_ft_withdraw_call";
 pub const GAS_BUFFER: Gas = Gas(5_000_000_000_000u64);
 pub const GAS_FOR_INTERNAL_RESOLVE: Gas = Gas(5_000_000_000_000u64);
 
@@ -24,6 +25,61 @@ pub fn get_internal_balance<Info: AccountInfoTrait>(
     token_id: &TokenId,
 ) -> u128 {
     account.info.get_balance(token_id)
+}
+
+
+/// Resolve the ft transfer by updating the amount used in the balances
+/// `is_ft_call` - If false, assume that an ft_transfer occurred
+/// @returns the amount used
+pub fn resolve_internal_withdraw_call<Info: AccountInfoTrait>(
+    accounts: &mut Accounts<Info>,
+    account_id: &AccountId,
+    token_id: TokenId,
+    amount: U128,
+    is_call: bool,
+) -> U128 {
+    let amount: u128 = amount.into();
+    if amount == 0 {
+        return U128(0);
+    }
+    // let account = accounts.get_account_checked(account_id);
+    match near_sdk::utils::promise_result_as_success() {
+        None => {
+            log!("The FT transfer call failed, redepositing funds");
+            increase_balance(accounts, account_id, &token_id, amount);
+            U128(0)
+        }
+        Some(data) => {
+            let amount_used = if is_call {
+                let amount_used_str: String = serde_json::from_slice(data.as_slice())
+                    .unwrap_or_else(|e| {
+                        panic!("Failed to deserialize ft_transfer_call result {}", e)
+                    });
+                amount_used_str
+                    .parse::<u128>()
+                    .unwrap_or_else(|e| panic!("Failed to parse result with {}", e))
+            } else {
+                amount
+            };
+            // TODO: err handling?
+            let amount_unused = amount - amount_used;
+            log!("Amount unused {}", amount_unused);
+            if amount_unused > 0 {
+                increase_balance(accounts, account_id, &token_id, amount_unused);
+            }
+            U128(amount_used)
+        }
+    }
+}
+
+pub fn get_internal_resolve_data(
+    sender: &AccountId,
+    token_id: &TokenId,
+    amount: U128,
+    is_call: bool,
+) -> Result<String, serde_json::error::Error> {
+    let internal_resolve_args = json!({"account_id": sender, "token_id": token_id, "amount": amount, "is_call": is_call});
+    Ok(internal_resolve_args.to_string())
 }
 
 /// Get the cost of adding 1 balance to a user's account

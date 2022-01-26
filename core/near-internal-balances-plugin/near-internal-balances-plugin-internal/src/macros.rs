@@ -34,10 +34,7 @@ macro_rules! impl_near_balance_plugin {
             }
 
             fn get_storage_cost_for_one_balance(&mut self, token_id: TokenId) -> Balance {
-                $crate::core_impl::get_storage_cost_for_one_balance(
-                    &mut self.$accounts,
-                    token_id,
-                )
+                $crate::core_impl::get_storage_cost_for_one_balance(&mut self.$accounts, token_id)
             }
 
             fn increase_balance(
@@ -89,6 +86,22 @@ macro_rules! impl_near_balance_plugin {
                 $crate::ft::ft_on_transfer(&mut self.$accounts, sender_id, amount, msg)
             }
 
+            fn nft_on_transfer(
+                &mut self,
+                sender_id: AccountId,
+                previous_owner_id: AccountId,
+                token_id: String,
+                msg: String,
+            ) -> bool {
+                $crate::nft::nft_on_transfer(
+                    &mut self.$accounts,
+                    sender_id,
+                    previous_owner_id,
+                    token_id,
+                    msg,
+                )
+            }
+
             fn get_internal_balance(&self, account_id: AccountId, token_id: TokenId) -> U128 {
                 let bal = self
                     .$accounts
@@ -101,14 +114,14 @@ macro_rules! impl_near_balance_plugin {
             /// A private contract function which resolves the ft transfer by updating the amount used in the balances
             /// @returns the amount used
             #[private]
-            fn resolve_internal_ft_withdraw_call(
+            fn resolve_internal_withdraw_call(
                 &mut self,
                 account_id: AccountId,
-                token_id: AccountId,
+                token_id: $crate::token_id::TokenId,
                 amount: U128,
                 is_ft_call: bool,
             ) -> U128 {
-                $crate::ft::resolve_internal_ft_withdraw_call(
+                $crate::core_impl::resolve_internal_withdraw_call(
                     &mut self.$accounts,
                     &account_id.into(),
                     token_id,
