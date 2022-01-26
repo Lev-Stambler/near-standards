@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use dummy::ContractContract as DummyContract;
 use ft::ContractContract as FTContract;
-use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
+use near_sdk::{json_types::U128, AccountId};
 use near_sdk_sim::{
     deploy, init_simulator, to_yocto, ContractAccount, UserAccount, DEFAULT_GAS, STORAGE_AMOUNT,
 };
@@ -18,14 +20,14 @@ const FT_ID: &str = "ft";
 // Register the given `user` with FT contract
 pub fn register_user(user: &near_sdk_sim::UserAccount) {
     user.call(
-        DUMMY_ID.to_string(),
+        AccountId::from_str(DUMMY_ID).unwrap(),
         "accounts_storage_deposit",
         &json!({}).to_string().into_bytes(),
         near_sdk_sim::DEFAULT_GAS / 2,
         near_sdk::env::storage_byte_cost() * 1_000,
     );
     user.call(
-        FT_ID.to_string(),
+        AccountId::from_str(FT_ID).unwrap(),
         "storage_deposit",
         &json!({
             "account_id": user.account_id()
@@ -69,12 +71,12 @@ pub fn init_with_macros(
         init_method: new_default_meta(root.account_id(), ft_total_supply.into())
     );
 
-    let alice = root.create_user("alice".to_string(), to_yocto("100"));
+    let alice = root.create_user(AccountId::from_str("alice").unwrap(), to_yocto("100"));
     register_user(&alice);
     register_user(&root);
 
     root.call(
-        FT_ID.to_string(),
+        AccountId::from_str(FT_ID).unwrap(),
         "storage_deposit",
         &json!({
             "account_id": dummy.account_id()
