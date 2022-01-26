@@ -14,6 +14,7 @@ dummy = { path = "./dummy" }
 ft = { path = "./ft" }
 nft = { path = "./nft" }
 multi-token = { path = "../multi-token-standard-impl/examples/multi-token/mt" }
+multi-token-standard = { path = "../multi-token-standard-impl/multi_token" }
 near-internal-balances-plugin = { path = "./near-internal-balances-plugin" }
 
 

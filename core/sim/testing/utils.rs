@@ -3,12 +3,14 @@ use std::str::FromStr;
 use dummy::ContractContract as DummyContract;
 use ft::ContractContract as FTContract;
 use multi_token::ContractContract as MTContract;
+use multi_token_standard::TokenType;
 use near_sdk::serde_json::json;
 use near_sdk::{json_types::U128, AccountId};
 use near_sdk_sim::{
-    deploy, init_simulator, to_yocto, ContractAccount, UserAccount, DEFAULT_GAS, STORAGE_AMOUNT,
+    call, deploy, init_simulator, to_yocto, ContractAccount, UserAccount, DEFAULT_GAS,
+    STORAGE_AMOUNT,
 };
-use nft::ContractContract as NFTContract;
+use nft::{ContractContract as NFTContract, DEFAULT_META};
 
 // Load in contract bytes at runtime
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
@@ -18,41 +20,52 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     MT_BYTES => "res/multi_token.wasm",
 }
 
-const DUMMY_ID: &str = "dummy";
-const FT_ID: &str = "ft";
-const NFT_ID: &str = "nft";
-const MT_ID: &str = "mt";
+pub const DUMMY_ID: &str = "dummy";
+pub const FT_ID: &str = "ft";
+pub const NFT_ID: &str = "nft";
+pub const NFT_TOKEN_ID: &str = "nft1";
+pub const MT_ID: &str = "mt";
+
+pub const MT_NFT_ID: &str = "MT-nft";
+pub const MT_FT_ID: &str = "MT-ft";
 
 // Register the given `user` with FT contract
-pub fn register_user(user: &near_sdk_sim::UserAccount) {
+pub fn register_user(user: &near_sdk_sim::UserAccount, is_root: bool) {
     user.call(
         AccountId::from_str(DUMMY_ID).unwrap(),
         "accounts_storage_deposit",
-        &json!({}).to_string().into_bytes(),
-        near_sdk_sim::DEFAULT_GAS / 2,
-        near_sdk::env::storage_byte_cost() * 1_000,
-    );
-
-    user.call(
-        AccountId::from_str(MT_ID).unwrap(),
-        "storage_deposit",
         &json!({
-            "account_id": user.account_id(),
-            "token_ids": Vec::<String>::default(),
             "registration_only": false,
         })
         .to_string()
         .into_bytes(),
         near_sdk_sim::DEFAULT_GAS / 2,
-        near_sdk::env::storage_byte_cost() * 2_000,
-    )
-    .assert_success();
+        near_sdk::env::storage_byte_cost() * 1_000,
+    );
+
+    if !is_root {
+        user.call(
+            AccountId::from_str(MT_ID).unwrap(),
+            "storage_deposit",
+            &json!({
+                "account_id": user.account_id(),
+                "token_ids": vec![MT_NFT_ID.to_string(), MT_FT_ID.to_string()],
+                "registration_only": false,
+            })
+            .to_string()
+            .into_bytes(),
+            near_sdk_sim::DEFAULT_GAS / 2,
+            near_sdk::env::storage_byte_cost() * 2_000,
+        )
+        .assert_success();
+    }
 
     user.call(
         AccountId::from_str(FT_ID).unwrap(),
         "storage_deposit",
         &json!({
-            "account_id": user.account_id()
+            "account_id": user.account_id(),
+            "registration_only": false,
         })
         .to_string()
         .into_bytes(),
@@ -125,8 +138,36 @@ pub fn init_with_macros(
     );
 
     let alice = root.create_user(AccountId::from_str("alice").unwrap(), to_yocto("100"));
-    register_user(&alice);
-    register_user(&root);
+
+    // Create the mt ft
+    call!(
+        root,
+        mt.mint(
+            MT_FT_ID.to_string(),
+            TokenType::Ft,
+            Some(ft_total_supply.into()),
+            root.account_id(),
+            None
+        ),
+        deposit = near_sdk::env::storage_byte_cost() * 1_000
+    )
+    .assert_success();
+    // Create the mt nft
+    call!(
+        root,
+        mt.mint(MT_NFT_ID.to_string(), TokenType::Nft, None, root.account_id(), None),
+        deposit = near_sdk::env::storage_byte_cost() * 1_000
+    )
+    .assert_success();
+    call!(
+        root,
+        nft.nft_mint(NFT_TOKEN_ID.to_string(), root.account_id(), DEFAULT_META),
+        deposit = near_sdk::env::storage_byte_cost() * 1_000
+    )
+    .assert_success();
+
+    register_user(&root, true);
+    register_user(&alice, false);
 
     root.call(
         AccountId::from_str(FT_ID).unwrap(),

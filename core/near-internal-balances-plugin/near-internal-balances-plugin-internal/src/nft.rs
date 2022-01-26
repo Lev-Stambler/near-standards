@@ -31,6 +31,7 @@ pub fn nft_on_transfer<Info: AccountInfoTrait>(
     token_id: String,
     msg: String,
 ) -> bool {
+    log!("GOT HERE?");
     let opts: OnTransferOpts = if (&msg).len() == 0 {
         OnTransferOpts { sender_id: previous_owner_id.clone().into() }
     } else {
@@ -45,7 +46,7 @@ pub fn nft_on_transfer<Info: AccountInfoTrait>(
     true
 }
 
-pub fn nft_withdraw_to<Info: AccountInfoTrait>(
+pub fn nft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     contract_id: AccountId,
     token_id: String,
@@ -121,7 +122,7 @@ mod tests {
 
     use std::convert::TryFrom;
 
-    use crate::core_impl::get_internal_balance;
+    use crate::core_impl::internal_balance_get_balance;
     use crate::token_id::TokenId;
     use crate::BalanceInfo;
 
@@ -198,7 +199,7 @@ mod tests {
         testing_env!(context.build());
         testing_env!(context.attached_deposit(1).build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
-        nft_withdraw_to(&mut near_accounts, account, tok.to_string(), None, None);
+        nft_internal_balance_withdraw_to(&mut near_accounts, account, tok.to_string(), None, None);
     }
 
     #[test]
@@ -221,12 +222,12 @@ mod tests {
             "".to_string(),
         );
         let near_account = near_accounts.get_account_checked(&account);
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1);
 
         subtract_balance(&mut near_accounts, &account, &tok_id, 1);
         let near_account = near_accounts.get_account_checked(&account);
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 0);
     }
 
@@ -239,7 +240,7 @@ mod tests {
         let tok_id_str = "tok".to_string();
         let tok_id = TokenId::NFT { contract_id: tok.clone(), token_id: tok_id_str.clone() };
 
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 0);
 
         let success = nft_on_transfer(
@@ -252,7 +253,7 @@ mod tests {
         assert_eq!(success, true);
 
         let near_account = near_accounts.get_account_checked(&account);
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1);
 				// TODO: should we limit the tok bal to 1 for NFT?
     }

@@ -2,9 +2,11 @@
 macro_rules! impl_near_balance_plugin {
     ($contract_struct: ident, $accounts: ident, $info_struct: ident, $balance_map: ident) => {
         use $crate::{
-            BalanceInfo, InternalBalanceHandlers, NearFTInternalBalance,
+            BalanceInfo, NearFTInternalBalance,
             SudoInternalBalanceHandlers,
         };
+
+        pub use $crate::InternalBalanceHandlers;
 
         impl $crate::BalanceInfo for $info_struct {
             fn get_balance(&self, token_id: &$crate::token_id::TokenId) -> Balance {
@@ -54,18 +56,18 @@ macro_rules! impl_near_balance_plugin {
             fn get_balance_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance {
                 self.$accounts
                     .get_account(&account_id)
-                    .map(|a| $crate::core_impl::get_internal_balance(&a, &token_id))
+                    .map(|a| $crate::core_impl::internal_balance_get_balance(&a, &token_id))
                     .unwrap_or(0)
             }
 
-            fn balance_transfer_internal(
+            fn internal_balance_transfer_internal(
                 &mut self,
                 recipient: AccountId,
                 token_id: TokenId,
                 amount: u128,
                 message: Option<String>,
             ) {
-                $crate::core_impl::balance_transfer(
+                $crate::core_impl::internal_balance_transfer(
                     &mut self.$accounts,
                     &recipient,
                     &token_id,
@@ -102,11 +104,11 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
 
-            fn get_internal_balance(&self, account_id: AccountId, token_id: TokenId) -> U128 {
+            fn internal_balance_get_balance(&self, account_id: AccountId, token_id: TokenId) -> U128 {
                 let bal = self
                     .$accounts
                     .get_account(&account_id.into())
-                    .map(|a| $crate::core_impl::get_internal_balance(&a, &token_id.into()))
+                    .map(|a| $crate::core_impl::internal_balance_get_balance(&a, &token_id.into()))
                     .unwrap_or(0);
                 U128::from(bal)
             }
@@ -131,25 +133,25 @@ macro_rules! impl_near_balance_plugin {
             }
 
             #[payable]
-            fn balance_transfer(
+            fn internal_balance_transfer(
                 &mut self,
                 recipient: AccountId,
                 token_id: $crate::token_id::TokenId,
                 amount: U128,
                 message: Option<String>,
             ) {
-                self.balance_transfer_internal(recipient.into(), token_id, amount.into(), message)
+                self.internal_balance_transfer_internal(recipient.into(), token_id, amount.into(), message)
             }
 
             #[payable]
-            fn withdraw_to(
+            fn internal_balance_withdraw_to(
                 &mut self,
                 amount: U128,
                 token_id: $crate::token_id::TokenId,
                 recipient: Option<AccountId>,
                 msg: Option<String>,
             ) {
-                $crate::core_impl::withdraw_to(
+                $crate::core_impl::internal_balance_withdraw_to(
                     &mut self.$accounts,
                     amount.into(),
                     &token_id,

@@ -29,6 +29,7 @@ pub fn ft_on_transfer<Info: AccountInfoTrait>(
     amount: String,
     msg: String,
 ) -> String {
+    log!("GOT HERE?");
     let opts: OnTransferOpts = if (&msg).len() == 0 {
         OnTransferOpts { sender_id: sender_id.clone().into() }
     } else {
@@ -42,7 +43,7 @@ pub fn ft_on_transfer<Info: AccountInfoTrait>(
     "0".to_string()
 }
 
-pub fn ft_withdraw_to<Info: AccountInfoTrait>(
+pub fn ft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     amount: u128,
     token_id: AccountId,
@@ -217,7 +218,7 @@ mod tests {
 
     use std::convert::TryFrom;
 
-    use crate::core_impl::get_internal_balance;
+    use crate::core_impl::internal_balance_get_balance;
     use crate::token_id::TokenId;
     use crate::BalanceInfo;
 
@@ -293,7 +294,7 @@ mod tests {
         testing_env!(context.build());
         testing_env!(context.attached_deposit(1).build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
-        ft_withdraw_to(&mut near_accounts, 1_000, tok, None, None);
+        ft_internal_balance_withdraw_to(&mut near_accounts, 1_000, tok, None, None);
     }
 
     #[test]
@@ -309,17 +310,17 @@ mod tests {
 
         ft_on_transfer(&mut near_accounts, account.clone(), 1000.to_string(), "".to_string());
         let near_account = near_accounts.get_account_checked(&account);
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_000);
 
         subtract_balance(&mut near_accounts, &account, &tok_id, 100);
         let near_account = near_accounts.get_account_checked(&account);
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 900);
 
         subtract_balance(&mut near_accounts, &account, &tok_id, 100);
         let near_account = near_accounts.get_account_checked(&account);
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 800);
     }
 
@@ -330,7 +331,7 @@ mod tests {
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
 
         let tok_id = TokenId::new_ft(tok.clone());
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 0);
 
         let amount_unused =
@@ -339,7 +340,7 @@ mod tests {
 
         let near_account = near_accounts.get_account_checked(&account);
         let tok_id = TokenId::new_ft(tok.clone());
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_000);
 
         let amount_unused = ft_on_transfer(
@@ -352,7 +353,7 @@ mod tests {
         assert_eq!(amount_unused, "0");
         let near_account = near_accounts.get_account_checked(&account);
         let tok_id = TokenId::new_ft(tok.clone());
-        let bal = get_internal_balance(&near_account, &tok_id);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_100);
     }
 }

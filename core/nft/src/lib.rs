@@ -18,8 +18,8 @@ NOTES:
 use near_contract_standards::non_fungible_token::metadata::{
     NFTContractMetadata, NonFungibleTokenMetadataProvider, TokenMetadata, NFT_METADATA_SPEC,
 };
-use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_contract_standards::non_fungible_token::NonFungibleToken;
+use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LazyOption;
 use near_sdk::json_types::ValidAccountId;
@@ -44,6 +44,21 @@ enum StorageKey {
     Enumeration,
     Approval,
 }
+
+pub const DEFAULT_META: TokenMetadata = TokenMetadata {
+    title: None,          // ex. "Arch Nemesis: Mail Carrier" or "Parcel #5055"
+    description: None,    // free-form description
+    media: None, // URL to associated media, preferably to decentralized, content-addressed storage
+    media_hash: None, // Base64-encoded sha256 hash of content referenced by the `media` field. Required if `media` is included.
+    copies: None, // number of copies of this set of metadata in existence when token was minted.
+    issued_at: None, // ISO 8601 datetime when token was issued or minted
+    expires_at: None, // ISO 8601 datetime when token expires
+    starts_at: None, // ISO 8601 datetime when token starts being valid
+    updated_at: None, // ISO 8601 datetime when token was last updated
+    extra: None,  // anything extra the NFT wants to store on-chain. Can be stringified JSON.
+    reference: None, // URL to an off-chain JSON file with more info.
+    reference_hash: None, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
+};
 
 #[near_bindgen]
 impl Contract {
@@ -93,10 +108,10 @@ impl Contract {
     pub fn nft_mint(
         &mut self,
         token_id: TokenId,
-        receiver_id: ValidAccountId,
+        receiver_id: AccountId,
         token_metadata: TokenMetadata,
     ) -> Token {
-        self.tokens.mint(token_id, receiver_id, Some(token_metadata))
+        self.tokens.internal_mint(token_id, receiver_id, Some(token_metadata))
     }
 }
 

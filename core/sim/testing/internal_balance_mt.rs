@@ -27,14 +27,14 @@ fn simulate_simple_internal_balances_test() {
 
     let ft_id = TokenId::FT { contract_id: ft.account_id() };
     let ft_bal_root_internal: U128 =
-        view!(dummy.get_internal_balance(root.account_id(), ft_id.clone())).unwrap_json();
+        view!(dummy.internal_balance_get_balance(root.account_id(), ft_id.clone())).unwrap_json();
     let ft_bal_root_post_transfer: U128 = view!(ft.ft_balance_of(root.account_id())).unwrap_json();
 
     assert_eq!(ft_bal_root.0 - ft_bal_root_post_transfer.0, amount_transfer);
     assert_eq!(ft_bal_root_internal.0, amount_transfer);
 
     // Withdraw back into the callee's account
-    call!(root, dummy.withdraw_to(amount_transfer.into(), ft_id.clone(), None, None), deposit = 1)
+    call!(root, dummy.internal_balance_withdraw_to(amount_transfer.into(), ft_id.clone(), None, None), deposit = 1)
         .assert_success();
 
     let ft_bal_root_post_withdraw: U128 = view!(ft.ft_balance_of(root.account_id())).unwrap_json();
@@ -61,14 +61,14 @@ fn simulate_simple_internal_balances_test_with_sender_id() {
     .assert_success();
 
     let ft_bal_alice_internal: U128 =
-        view!(dummy.get_internal_balance(alice.account_id(), ft_id.clone())).unwrap_json();
+        view!(dummy.internal_balance_get_balance(alice.account_id(), ft_id.clone())).unwrap_json();
     let ft_bal_root_post_transfer: U128 = view!(ft.ft_balance_of(root.account_id())).unwrap_json();
 
     assert_eq!(ft_bal_root.0 - ft_bal_root_post_transfer.0, amount_transfer);
     assert_eq!(ft_bal_alice_internal.0, amount_transfer);
 
     // Withdraw back into the callee's account
-    call!(alice, dummy.withdraw_to(amount_transfer.into(), ft_id.clone(), None, None), deposit = 1)
+    call!(alice, dummy.internal_balance_withdraw_to(amount_transfer.into(), ft_id.clone(), None, None), deposit = 1)
         .assert_success();
 
     let ft_bal_alice_post_withdraw: U128 =
@@ -76,6 +76,6 @@ fn simulate_simple_internal_balances_test_with_sender_id() {
     assert_eq!(amount_transfer, ft_bal_alice_post_withdraw.0);
 
     let ft_bal_alice_internal: U128 =
-        view!(dummy.get_internal_balance(alice.account_id(), ft_id.clone())).unwrap_json();
+        view!(dummy.internal_balance_get_balance(alice.account_id(), ft_id.clone())).unwrap_json();
     assert_eq!(ft_bal_alice_internal.0, 0);
 }

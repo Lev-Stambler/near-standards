@@ -43,7 +43,7 @@ pub trait SudoInternalBalanceHandlers {
     /// Get the storage cost for one balance account
     fn get_storage_cost_for_one_balance(&mut self, token_id: TokenId) -> Balance;
     /// Same as balance transfer but internal types
-    fn balance_transfer_internal(
+    fn internal_balance_transfer_internal(
         &mut self,
         recipient: AccountId,
         token_id: TokenId,
@@ -65,7 +65,7 @@ pub trait InternalBalanceHandlers {
 
     // TODO:
     // fn nft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
-    fn get_internal_balance(&self, account_id: AccountId, token_id: TokenId) -> U128;
+    fn internal_balance_get_balance(&self, account_id: AccountId, token_id: TokenId) -> U128;
     fn resolve_internal_withdraw_call(
         &mut self,
         account_id: AccountId,
@@ -74,7 +74,7 @@ pub trait InternalBalanceHandlers {
         is_call: bool,
     ) -> U128;
 
-    fn withdraw_to(
+    fn internal_balance_withdraw_to(
         &mut self,
         amount: U128,
         token_id: TokenId,
@@ -82,7 +82,7 @@ pub trait InternalBalanceHandlers {
         msg: Option<String>,
     );
 
-    fn balance_transfer(
+    fn internal_balance_transfer(
         &mut self,
         recipient: AccountId,
         token_id: TokenId,

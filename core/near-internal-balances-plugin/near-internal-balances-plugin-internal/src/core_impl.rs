@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::ft::ft_withdraw_to;
+use crate::ft::ft_internal_balance_withdraw_to;
 use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo};
 use near_sdk::{
     assert_one_yocto,
@@ -20,7 +20,7 @@ pub const RESOLVE_WITHDRAW_NAME: &str = "resolve_internal_ft_withdraw_call";
 pub const GAS_BUFFER: Gas = Gas(5_000_000_000_000u64);
 pub const GAS_FOR_INTERNAL_RESOLVE: Gas = Gas(5_000_000_000_000u64);
 
-pub fn get_internal_balance<Info: AccountInfoTrait>(
+pub fn internal_balance_get_balance<Info: AccountInfoTrait>(
     account: &Account<Info>,
     token_id: &TokenId,
 ) -> u128 {
@@ -108,7 +108,7 @@ pub fn get_storage_cost_for_one_balance<Info: AccountInfoTrait>(
     return (storage_usage - storage_usage_init_with_account) as u128 * env::storage_byte_cost();
 }
 
-pub fn withdraw_to<Info: AccountInfoTrait>(
+pub fn internal_balance_withdraw_to<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     amount: u128,
     token_id: &TokenId,
@@ -119,7 +119,7 @@ pub fn withdraw_to<Info: AccountInfoTrait>(
     let caller = env::predecessor_account_id();
     match token_id {
         TokenId::FT { contract_id } => {
-            ft_withdraw_to(accounts, amount, contract_id.clone(), recipient, msg)
+            ft_internal_balance_withdraw_to(accounts, amount, contract_id.clone(), recipient, msg)
         }
         TokenId::MT { contract_id, token_id } => {
             todo!()
@@ -130,7 +130,7 @@ pub fn withdraw_to<Info: AccountInfoTrait>(
     }
 }
 
-pub fn balance_transfer<Info: AccountInfoTrait>(
+pub fn internal_balance_transfer<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     recipient: &AccountId,
     token_id: &TokenId,
@@ -153,7 +153,7 @@ pub fn increase_balance<Info: AccountInfoTrait>(
     amount: u128,
 ) {
     let mut account = accounts.get_account_checked(account_id);
-    let current_balance = get_internal_balance(&account, token_id);
+    let current_balance = internal_balance_get_balance(&account, token_id);
 
     log!(
         "Adding {} from {} for token {} with current balance {}",
@@ -175,7 +175,7 @@ pub fn subtract_balance<Info: AccountInfoTrait>(
     amount: u128,
 ) {
     let mut account = accounts.get_account_checked(account_id);
-    let current_balance = get_internal_balance(&account, token);
+    let current_balance = internal_balance_get_balance(&account, token);
 
     if current_balance < amount {
         panic!("The callee did not deposit sufficient funds. Current balance: {}, requested amount {}, token {}", current_balance, amount, token);

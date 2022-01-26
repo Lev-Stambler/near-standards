@@ -1020,6 +1020,7 @@ dependencies = [
  "dummy",
  "ft",
  "multi-token",
+ "multi-token-standard",
  "near-contract-standards",
  "near-internal-balances-plugin",
  "near-sdk",
