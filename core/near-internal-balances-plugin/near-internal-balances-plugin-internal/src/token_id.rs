@@ -7,7 +7,7 @@ use near_sdk::{
     serde::{self, Deserialize, Serialize},
 };
 
-#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Debug)]
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Debug, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub enum TokenId {
     MT { contract_id: AccountId, token_id: AccountId },

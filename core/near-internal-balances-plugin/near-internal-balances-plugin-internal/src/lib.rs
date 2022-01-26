@@ -17,7 +17,7 @@ mod mt;
 mod nft;
 pub mod token_id;
 pub use macros::*;
-use token_id::TokenId;
+pub use token_id::TokenId;
 
 pub trait NearFTInternalBalance: SudoInternalBalanceHandlers + InternalBalanceHandlers {}
 

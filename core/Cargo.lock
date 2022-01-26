@@ -1021,6 +1021,7 @@ dependencies = [
  "ft",
  "multi-token",
  "near-contract-standards 4.0.0-pre.6",
+ "near-internal-balances-plugin",
  "near-sdk 4.0.0-pre.6",
  "near-sdk-sim",
 ]

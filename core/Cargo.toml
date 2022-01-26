@@ -4,7 +4,7 @@ version = "0.0.1"
 authors = ["Near Inc <hello@near.org>"]
 edition = "2018"
 
-[dependencies]
+[dev-dependencies]
 near-sdk-sim = "4.0.0-pre.2"
 near-sdk = "4.0.0-pre.2"
 near-contract-standards = "4.0.0-pre.2"
@@ -13,6 +13,8 @@ near-contract-standards = "4.0.0-pre.2"
 dummy = { path = "./dummy" }
 ft = { path = "./ft" }
 multi-token = { path = "../multi-token-standard-impl/examples/multi-token/mt" }
+near-internal-balances-plugin = { path = "./near-internal-balances-plugin" }
+
 
 [profile.release]
 codegen-units = 1
