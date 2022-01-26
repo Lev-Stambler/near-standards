@@ -4,7 +4,7 @@ version = "0.0.1"
 authors = ["Near Inc <hello@near.org>"]
 edition = "2018"
 
-[dev-dependencies]
+[dependencies]
 near-sdk-sim = "4.0.0-pre.2"
 near-sdk = "4.0.0-pre.2"
 near-contract-standards = "4.0.0-pre.2"
@@ -12,7 +12,7 @@ near-contract-standards = "4.0.0-pre.2"
 # remember to include a line for each contract
 dummy = { path = "./dummy" }
 ft = { path = "./ft" }
-# mt = { path = "../multi-token-standard-impl/examples/multi-token/mt" }
+multi-token = { path = "../multi-token-standard-impl/examples/multi-token/mt" }
 
 [profile.release]
 codegen-units = 1
@@ -22,6 +22,10 @@ lto = true
 debug = false
 panic = "abort"
 overflow-checks = true
+
+[[bin]]
+name = "test"
+path = "sim/main.rs"
 
 [workspace]
 members = ["near-account", "dummy", "near-internal-balances-plugin"]

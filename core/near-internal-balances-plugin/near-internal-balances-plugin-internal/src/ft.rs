@@ -19,12 +19,9 @@ const RESOLVE_FT_NAME: &str = "resolve_internal_ft_withdraw_call";
 const FT_TRANSFER_CALL_METHOD_NAME: &str = "ft_transfer_call";
 const FT_TRANSFER_METHOD_NAME: &str = "ft_transfer";
 
-const GAS_FOR_FT_RESOLVE_TRANSFER_NEP141: Gas = 5_000_000_000_000;
-const GAS_FOR_ON_TRANSFER_NEP141: Gas = 5_000_000_000_000;
-const GAS_FOR_FT_TRANSFER_CALL_NEP141: Gas = GAS_FOR_FT_RESOLVE_TRANSFER_NEP141
-    + GAS_FOR_ON_TRANSFER_NEP141
-    + 25_000_000_000_000
-    + GAS_BUFFER;
+const GAS_FOR_FT_RESOLVE_TRANSFER_NEP141: Gas = Gas(5_000_000_000_000);
+const GAS_FOR_ON_TRANSFER_NEP141: Gas = Gas(5_000_000_000_000);
+const GAS_FOR_FT_TRANSFER_CALL_NEP141: Gas =  Gas(25_000_000_000_000 + 3 * 5_000_000_000_000);
 
 pub fn ft_on_transfer<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
@@ -83,7 +80,7 @@ fn internal_ft_withdraw<Info: AccountInfoTrait>(
             let prom = env::promise_batch_create(token_id);
             env::promise_batch_action_function_call(
                 prom,
-                FT_TRANSFER_METHOD_NAME.as_bytes(),
+                FT_TRANSFER_METHOD_NAME,
                 &data,
                 1,
                 GAS_FOR_FT_TRANSFER_CALL_NEP141,
@@ -92,8 +89,8 @@ fn internal_ft_withdraw<Info: AccountInfoTrait>(
         }
         Some(prior_prom) => env::promise_then(
             prior_prom,
-            token_id.to_string(),
-            FT_TRANSFER_METHOD_NAME.as_bytes(),
+            token_id.clone(),
+            FT_TRANSFER_METHOD_NAME,
             &data,
             1,
             GAS_FOR_FT_TRANSFER_CALL_NEP141,
@@ -104,7 +101,7 @@ fn internal_ft_withdraw<Info: AccountInfoTrait>(
     env::promise_then(
         ft_transfer_prom,
         env::current_account_id(),
-        RESOLVE_FT_NAME.as_bytes(),
+        RESOLVE_FT_NAME,
         internal_resolve_args.to_string().as_bytes(),
         0,
         GAS_FOR_INTERNAL_RESOLVE,
@@ -145,7 +142,12 @@ fn _internal_ft_withdraw_call<Info: AccountInfoTrait>(
     custom_message: Option<String>,
     amount_near: Balance,
 ) -> u64 {
-    let data = get_transfer_call_data(recipient, amount.clone(), sender.clone(), custom_message);
+    let data = get_transfer_call_data(
+        recipient.to_string(),
+        amount.clone(),
+        sender.clone(),
+        custom_message,
+    );
 
     let amount_parsed = amount.0;
 
@@ -156,7 +158,7 @@ fn _internal_ft_withdraw_call<Info: AccountInfoTrait>(
             let prom_batch = env::promise_batch_create(token_id);
             env::promise_batch_action_function_call(
                 prom_batch,
-                FT_TRANSFER_CALL_METHOD_NAME.as_bytes(),
+                FT_TRANSFER_CALL_METHOD_NAME,
                 &data,
                 amount_near,
                 GAS_FOR_FT_TRANSFER_CALL_NEP141,
@@ -165,8 +167,8 @@ fn _internal_ft_withdraw_call<Info: AccountInfoTrait>(
         }
         Some(prior_prom) => env::promise_then(
             prior_prom,
-            token_id.to_string(),
-            FT_TRANSFER_CALL_METHOD_NAME.as_bytes(),
+            token_id.clone(),
+            FT_TRANSFER_CALL_METHOD_NAME,
             &data,
             amount_near,
             GAS_FOR_FT_TRANSFER_CALL_NEP141,
@@ -177,7 +179,7 @@ fn _internal_ft_withdraw_call<Info: AccountInfoTrait>(
     env::promise_then(
         ft_transfer_prom,
         env::current_account_id(),
-        RESOLVE_FT_NAME.as_bytes(),
+        RESOLVE_FT_NAME,
         internal_resolve_args.to_string().as_bytes(),
         0,
         GAS_FOR_INTERNAL_RESOLVE,
@@ -256,7 +258,7 @@ fn get_transfer_data(
 fn get_transfer_call_data(
     recipient: String,
     amount: U128,
-    sender: String,
+    sender: AccountId,
     custom_message: Option<String>,
 ) -> Vec<u8> {
     if let Some(msg) = custom_message {
@@ -287,7 +289,6 @@ mod tests {
     use near_contract_standards::storage_management::StorageManagement;
     use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
     use near_sdk::collections::UnorderedMap;
-    use near_sdk::json_types::ValidAccountId;
     use near_sdk::test_utils::{accounts, VMContextBuilder};
     use near_sdk::testing_env;
     use near_sdk::MockedBlockchain;
@@ -327,8 +328,7 @@ mod tests {
         let tok: AccountId = accounts(2).into();
         let min = near_accounts.storage_balance_bounds().min.0;
         testing_env!(context.attached_deposit(min * 10).build());
-        near_accounts
-            .storage_deposit(Some(ValidAccountId::try_from(account.clone()).unwrap()), None);
+        near_accounts.storage_deposit(Some(AccountId::try_from(account.clone()).unwrap()), None);
         testing_env!(context.attached_deposit(1).build());
         let near_account = near_accounts.get_account_checked(&account);
 
@@ -336,7 +336,7 @@ mod tests {
     }
 
     // mock the context for testing, notice "signer_account_id" that was accessed above from env::
-    fn get_context(predecessor_account_id: ValidAccountId) -> VMContextBuilder {
+    fn get_context(predecessor_account_id: AccountId) -> VMContextBuilder {
         let mut builder = VMContextBuilder::new();
         builder
             .current_account_id(accounts(0))

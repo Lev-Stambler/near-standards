@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::ft::ft_withdraw_to;
 use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo};
 use near_sdk::{
@@ -14,8 +16,8 @@ use crate::{token_id::TokenId, BalanceInfo, OnTransferOpts};
 
 pub trait AccountInfoTrait: DefaultAccountInfo + BalanceInfo {}
 
-pub const GAS_BUFFER: Gas = 5_000_000_000_000;
-pub const GAS_FOR_INTERNAL_RESOLVE: Gas = 5_000_000_000_000;
+pub const GAS_BUFFER: Gas = Gas(5_000_000_000_000u64);
+pub const GAS_FOR_INTERNAL_RESOLVE: Gas = Gas(5_000_000_000_000u64);
 
 pub fn get_internal_balance<Info: AccountInfoTrait>(
     account: &Account<Info>,
@@ -29,7 +31,7 @@ pub fn get_storage_cost_for_one_balance<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     token_id: TokenId,
 ) -> Balance {
-    let account_id = "a".repeat(64);
+    let account_id = AccountId::from_str(&"a".repeat(64)).unwrap();
 
     accounts.insert_account_unchecked(
         &account_id,
@@ -52,7 +54,7 @@ pub fn get_storage_cost_for_one_balance<Info: AccountInfoTrait>(
 
 pub fn withdraw_to<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
-    recipient: &Option<AccountId>,
+    recipient: Option<AccountId>,
     token_id: &TokenId,
     amount: u128,
     msg: Option<String>,
@@ -61,7 +63,7 @@ pub fn withdraw_to<Info: AccountInfoTrait>(
     let caller = env::predecessor_account_id();
     match token_id {
         TokenId::FT { contract_id } => {
-            ft_withdraw_to(accounts, amount, contract_id.to_string(), recipient, msg)
+            ft_withdraw_to(accounts, amount, contract_id.clone(), recipient, msg)
         }
         TokenId::MT { contract_id, token_id } => {
             todo!()

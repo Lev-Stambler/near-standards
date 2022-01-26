@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use near_contract_standards::storage_management::{
     StorageBalance, StorageBalanceBounds, StorageManagement,
 };
@@ -6,7 +8,7 @@ use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     collections::UnorderedMap,
     env::{self},
-    json_types::{ValidAccountId, U128},
+    json_types::U128,
     log, AccountId, Balance, Promise,
 };
 
@@ -50,10 +52,7 @@ impl<Info: AccountInfoTrait> Accounts<Info> {
         ret
     }
 
-    pub fn remove_account_unchecked(
-        &mut self,
-        account_id: &AccountId,
-    ) -> Option<Account<Info>> {
+    pub fn remove_account_unchecked(&mut self, account_id: &AccountId) -> Option<Account<Info>> {
         self.accounts.remove(account_id)
     }
 
@@ -100,7 +99,7 @@ impl<Info: AccountInfoTrait> Accounts<Info> {
         unregister: bool,
     ) -> u128 {
         let storage_prior = env::storage_usage();
-        let account_id = account_id.unwrap_or("a".repeat(64));
+        let account_id = account_id.unwrap_or(AccountId::from_str(&"a".repeat(64)).unwrap());
         let default_account = Account::default_from_account_id(account_id.clone());
         self.accounts.insert(&account_id, &default_account);
 
@@ -163,14 +162,11 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
     }
 
     fn storage_balance_bounds(&self) -> StorageBalanceBounds {
-        StorageBalanceBounds {
-            min: self.default_min_storage_bal.into(),
-            max: None,
-        }
+        StorageBalanceBounds { min: self.default_min_storage_bal.into(), max: None }
     }
 
-    fn storage_balance_of(&self, account_id: ValidAccountId) -> Option<StorageBalance> {
-        if let Some(account) = self.accounts.get(&account_id.into()) {
+    fn storage_balance_of(&self, account_id: AccountId) -> Option<StorageBalance> {
+        if let Some(account) = self.accounts.get(&account_id) {
             Some(account.storage_balance())
         } else {
             None
@@ -179,13 +175,12 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
 
     fn storage_deposit(
         &mut self,
-        account_id: Option<ValidAccountId>,
+        account_id: Option<AccountId>,
         registration_only: Option<bool>,
     ) -> near_contract_standards::storage_management::StorageBalance {
         let registration_only = registration_only.unwrap_or(false);
-        let account_id: AccountId = account_id
-            .map(|a| a.into())
-            .unwrap_or(env::predecessor_account_id());
+        let account_id: AccountId =
+            account_id.map(|a| a.into()).unwrap_or(env::predecessor_account_id());
         let amount_attached = env::attached_deposit();
         let registered = self.accounts.get(&account_id);
 
@@ -206,10 +201,7 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
             if amount_attached < storage_cost || amount_attached < min_storage_cost {
                 self.accounts.remove(&account_id);
                 Promise::new(env::predecessor_account_id()).transfer(amount_attached);
-                StorageBalance {
-                    available: 0.into(),
-                    total: 0.into(),
-                }
+                StorageBalance { available: 0.into(), total: 0.into() }
             } else if registration_only {
                 let amount_refund = storage_cost - amount_attached;
                 let mut account = self.accounts.get(&account_id).unwrap();

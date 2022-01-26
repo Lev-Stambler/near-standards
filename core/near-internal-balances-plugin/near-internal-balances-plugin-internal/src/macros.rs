@@ -81,7 +81,7 @@ macro_rules! impl_near_balance_plugin {
                 $crate::core_impl::ft_on_transfer(&mut self.$accounts, sender_id, amount, msg)
             }
 
-            fn get_balance(&self, account_id: ValidAccountId, token_id: ValidTokenId) -> U128 {
+            fn get_balance(&self, account_id: AccountId, token_id: ValidTokenId) -> U128 {
                 let bal = self
                     .$accounts
                     .get_account(&account_id.into())
@@ -95,8 +95,8 @@ macro_rules! impl_near_balance_plugin {
             #[private]
             fn resolve_internal_ft_withdraw_call(
                 &mut self,
-                account_id: ValidAccountId,
-                token_id: ValidAccountId,
+                account_id: AccountId,
+                token_id: AccountId,
                 amount: U128,
                 is_ft_call: bool,
             ) -> U128 {
@@ -112,7 +112,7 @@ macro_rules! impl_near_balance_plugin {
             #[payable]
             fn balance_transfer(
                 &mut self,
-                recipient: ValidAccountId,
+                recipient: AccountId,
                 token_id: ValidTokenId,
                 amount: U128,
                 message: Option<String>,
@@ -130,7 +130,7 @@ macro_rules! impl_near_balance_plugin {
                 &mut self,
                 amount: U128,
                 token_id: ValidTokenId,
-                recipient: Option<ValidAccountId>,
+                recipient: Option<AccountId>,
                 msg: Option<String>,
             ) {
                 $crate::core_impl::withdraw_to(

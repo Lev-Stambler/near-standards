@@ -1,11 +1,10 @@
-use crate::token_id::ValidTokenId;
-use near_account::Accounts;
+use near_account::{Accounts, Account};
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
     collections::UnorderedMap,
     env::{self},
-    json_types::{ValidAccountId, U128},
+    json_types::U128,
     log,
     serde::{Deserialize, Serialize},
     AccountId, Balance, Promise,
@@ -57,11 +56,11 @@ pub trait InternalBalanceHandlers {
     fn ft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
     // TODO:
     // fn nft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
-    fn get_internal_balance(&self, account_id: ValidAccountId, token_id: ValidTokenId) -> U128;
+    fn get_internal_balance(&self, account_id: AccountId, token_id: AccountId) -> U128;
     fn resolve_internal_ft_withdraw_call(
         &mut self,
-        account_id: ValidAccountId,
-        token_id: ValidTokenId,
+        account_id: AccountId,
+        token_id: TokenId,
         amount: U128,
         is_ft_call: bool,
     ) -> U128;
@@ -69,15 +68,15 @@ pub trait InternalBalanceHandlers {
     fn withdraw_to(
         &mut self,
         amount: U128,
-        token_id: ValidTokenId,
-        recipient: Option<ValidAccountId>,
+        token_id: TokenId,
+        recipient: Option<AccountId>,
         msg: Option<String>,
     );
 
     fn balance_transfer(
         &mut self,
-        recipient: ValidAccountId,
-        token_id: ValidTokenId,
+        recipient: AccountId,
+        token_id: TokenId,
         amount: U128,
         message: Option<String>,
     );
