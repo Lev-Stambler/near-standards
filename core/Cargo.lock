@@ -806,9 +806,9 @@ name = "dummy"
 version = "1.0.0"
 dependencies = [
  "near-account",
- "near-contract-standards 4.0.0-pre.6",
+ "near-contract-standards",
  "near-internal-balances-plugin",
- "near-sdk 4.0.0-pre.6",
+ "near-sdk",
 ]
 
 [[package]]
@@ -1009,8 +1009,8 @@ checksum = "2022715d62ab30faffd124d40b76f4134a550a87792276512b18d63272333394"
 name = "ft"
 version = "1.0.0"
 dependencies = [
- "near-contract-standards 4.0.0-pre.6",
- "near-sdk 4.0.0-pre.6",
+ "near-contract-standards",
+ "near-sdk",
 ]
 
 [[package]]
@@ -1020,10 +1020,11 @@ dependencies = [
  "dummy",
  "ft",
  "multi-token",
- "near-contract-standards 4.0.0-pre.6",
+ "near-contract-standards",
  "near-internal-balances-plugin",
- "near-sdk 4.0.0-pre.6",
+ "near-sdk",
  "near-sdk-sim",
+ "nft",
 ]
 
 [[package]]
@@ -1567,15 +1568,15 @@ name = "multi-token"
 version = "0.0.1"
 dependencies = [
  "multi-token-standard",
- "near-sdk 4.0.0-pre.6",
+ "near-sdk",
 ]
 
 [[package]]
 name = "multi-token-standard"
 version = "0.0.1"
 dependencies = [
- "near-contract-standards 4.0.0-pre.6",
- "near-sdk 4.0.0-pre.6",
+ "near-contract-standards",
+ "near-sdk",
 ]
 
 [[package]]
@@ -1600,26 +1601,17 @@ dependencies = [
 name = "near-account-internal"
 version = "0.1.0"
 dependencies = [
- "near-contract-standards 4.0.0-pre.6",
- "near-sdk 4.0.0-pre.6",
+ "near-contract-standards",
+ "near-sdk",
 ]
 
 [[package]]
 name = "near-account-mac"
 version = "0.1.0"
 dependencies = [
- "near-sdk 4.0.0-pre.6",
+ "near-sdk",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "near-contract-standards"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7421d0a5c7aeb57b37a0cf3a71a7aefbbdc7727f9811d9dd86fa55e4f0de4d3"
-dependencies = [
- "near-sdk 3.1.0",
 ]
 
 [[package]]
@@ -1628,7 +1620,7 @@ version = "4.0.0-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b291a51228ed563f684ed75d9e61bb3b2881e957c72e9d9868971b453d958c46"
 dependencies = [
- "near-sdk 4.0.0-pre.6",
+ "near-sdk",
 ]
 
 [[package]]
@@ -1695,8 +1687,8 @@ name = "near-internal-balances-plugin-internal"
 version = "0.1.0"
 dependencies = [
  "near-account",
- "near-contract-standards 3.2.0",
- "near-sdk 4.0.0-pre.6",
+ "near-contract-standards",
+ "near-sdk",
 ]
 
 [[package]]
@@ -1915,23 +1907,6 @@ dependencies = [
 
 [[package]]
 name = "near-sdk"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7383e242d3e07bf0951e8589d6eebd7f18bb1c1fc5fbec3fad796041a6aebd1"
-dependencies = [
- "base64 0.13.0",
- "borsh 0.8.2",
- "bs58",
- "near-primitives-core 0.4.0",
- "near-sdk-macros 3.1.0",
- "near-vm-logic 4.0.0-pre.1",
- "serde",
- "serde_json",
- "wee_alloc",
-]
-
-[[package]]
-name = "near-sdk"
 version = "4.0.0-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cc26331767055239c2ed7ef9e7b415fdc40f7d6c7ea66a39d2079617010ea3e"
@@ -1940,36 +1915,12 @@ dependencies = [
  "borsh 0.9.1",
  "bs58",
  "near-primitives-core 0.10.0",
- "near-sdk-macros 4.0.0-pre.6",
+ "near-sdk-macros",
  "near-sys",
  "near-vm-logic 0.10.0",
  "serde",
  "serde_json",
  "wee_alloc",
-]
-
-[[package]]
-name = "near-sdk-core"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284a78d9eb8eda58330462fa0023a6d7014c941df1f0387095e7dfd1dc0f2bce"
-dependencies = [
- "Inflector",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "near-sdk-macros"
-version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2037337438f97d1ce5f7c896cf229dc56dacd5c01142d1ef95a7d778cde6ce7d"
-dependencies = [
- "near-sdk-core",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -1996,7 +1947,7 @@ dependencies = [
  "near-pool",
  "near-primitives 0.1.0-pre.1",
  "near-runtime",
- "near-sdk 4.0.0-pre.6",
+ "near-sdk",
  "near-store",
  "near-vm-logic 4.0.0-pre.1",
 ]
@@ -2115,6 +2066,14 @@ dependencies = [
  "wasmer-runtime-near",
  "wasmer-types",
  "wasmtime",
+]
+
+[[package]]
+name = "nft"
+version = "1.1.0"
+dependencies = [
+ "near-contract-standards",
+ "near-sdk",
 ]
 
 [[package]]

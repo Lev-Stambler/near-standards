@@ -12,6 +12,7 @@ near-contract-standards = "4.0.0-pre.2"
 # remember to include a line for each contract
 dummy = { path = "./dummy" }
 ft = { path = "./ft" }
+nft = { path = "./nft" }
 multi-token = { path = "../multi-token-standard-impl/examples/multi-token/mt" }
 near-internal-balances-plugin = { path = "./near-internal-balances-plugin" }
 
