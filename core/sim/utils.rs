@@ -28,7 +28,7 @@ pub fn register_user(user: &near_sdk_sim::UserAccount) {
         FT_ID.to_string(),
         "storage_deposit",
         &json!({
-            "account_id": user.valid_account_id()
+            "account_id": user.account_id()
         })
         .to_string()
         .into_bytes(),
@@ -66,7 +66,7 @@ pub fn init_with_macros(
         // User deploying the contract,
         signer_account: root,
         // init method
-        init_method: new_default_meta(root.valid_account_id(), ft_total_supply.into())
+        init_method: new_default_meta(root.account_id(), ft_total_supply.into())
     );
 
     let alice = root.create_user("alice".to_string(), to_yocto("100"));
@@ -77,7 +77,7 @@ pub fn init_with_macros(
         FT_ID.to_string(),
         "storage_deposit",
         &json!({
-            "account_id": dummy.valid_account_id()
+            "account_id": dummy.account_id()
         })
         .to_string()
         .into_bytes(),
