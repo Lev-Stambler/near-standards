@@ -1,23 +1,30 @@
 use near_account::Accounts;
 use near_sdk::{
-    assert_one_yocto, env,
+    assert_one_yocto, env, ext_contract,
     json_types::U128,
     log,
     serde_json::{self, json},
-    AccountId, Balance, Gas,
+    AccountId, Balance, Gas, Promise, ONE_YOCTO,
 };
 
 use crate::{
     core_impl::{
-        get_internal_resolve_data, increase_balance, subtract_balance, AccountInfoTrait,
+        get_internal_resolve_promise, increase_balance, subtract_balance, AccountInfoTrait,
         GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE, RESOLVE_WITHDRAW_NAME,
     },
     token_id::TokenId,
     OnTransferOpts,
 };
 
-const FT_TRANSFER_CALL_METHOD_NAME: &str = "ft_transfer_call";
-const FT_TRANSFER_METHOD_NAME: &str = "ft_transfer";
+#[ext_contract(ext_ft)]
+trait FTContract {
+    fn ft_transfer(
+        &mut self,
+        receiver_id: AccountId,
+        amount: U128,
+        memo: Option<String>,
+    ) -> Promise;
+}
 
 const GAS_FOR_FT_RESOLVE_TRANSFER_NEP141: Gas = Gas(5_000_000_000_000);
 const GAS_FOR_ON_TRANSFER_NEP141: Gas = Gas(5_000_000_000_000);
@@ -49,7 +56,7 @@ pub fn ft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     token_id: AccountId,
     recipient: Option<AccountId>,
     msg: Option<String>,
-) {
+) -> Promise {
     assert_one_yocto();
     let caller = env::predecessor_account_id();
 
@@ -59,156 +66,61 @@ pub fn ft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     let recipient = recipient.unwrap_or(caller.clone());
 
     let prom = internal_ft_withdraw(accounts, &caller, &token_id, recipient, amount, msg, None);
-    env::promise_return(prom);
+    prom
 }
 
 fn internal_ft_withdraw<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender: &AccountId,
-    token_id: &AccountId,
+    contract_id: &AccountId,
     recipient: AccountId,
     amount: u128,
-    msg: Option<String>,
-    prior_promise: Option<u64>,
-) -> u64 {
-    let data = get_transfer_data(recipient, U128::from(amount), sender.clone(), msg);
+    memo: Option<String>,
+    prior_promise: Option<Promise>,
+) -> Promise {
+    subtract_balance(accounts, sender, &TokenId::new_ft(contract_id.clone()), amount);
 
-    // TODO: update
-    subtract_balance(accounts, sender, &TokenId::new_ft(token_id.clone()), amount);
-
-    let ft_transfer_prom = match prior_promise {
-        None => {
-            let prom = env::promise_batch_create(token_id);
-            env::promise_batch_action_function_call(
-                prom,
-                FT_TRANSFER_METHOD_NAME,
-                &data,
-                1,
-                GAS_FOR_FT_TRANSFER_CALL_NEP141,
-            );
-            prom
-        }
-        Some(prior_prom) => env::promise_then(
-            prior_prom,
-            token_id.clone(),
-            FT_TRANSFER_METHOD_NAME,
-            &data,
-            1,
-            GAS_FOR_FT_TRANSFER_CALL_NEP141,
-        ),
-    };
-    let internal_resolve_args = get_internal_resolve_data(
-        &sender,
-        &TokenId::new_ft(token_id.clone()),
-        U128::from(amount),
-        false,
-    )
-    .unwrap();
-    env::promise_then(
-        ft_transfer_prom,
-        env::current_account_id(),
-        RESOLVE_WITHDRAW_NAME,
-        internal_resolve_args.to_string().as_bytes(),
-        0,
-        GAS_FOR_INTERNAL_RESOLVE,
-    )
-}
-
-// TODO: integrate
-fn internal_ft_withdraw_call<Info: AccountInfoTrait>(
-    accounts: &mut Accounts<Info>,
-    token_id: &AccountId,
-    recipient: AccountId,
-    amount: U128,
-    sender: AccountId,
-    prior_promise: Option<u64>,
-) -> u64 {
-    _internal_ft_withdraw_call(
-        accounts,
-        token_id,
-        recipient,
-        amount,
-        sender,
-        prior_promise,
-        None,
-        1,
-    )
-}
-
-/// Do an internal transfer and subtract the internal balance for {@param sender}
-///
-/// If there is a custom message, use that for the ft transfer. If not, use the default On Transfer Message
-fn _internal_ft_withdraw_call<Info: AccountInfoTrait>(
-    accounts: &mut Accounts<Info>,
-    token_id: &AccountId,
-    recipient: AccountId,
-    amount: U128,
-    sender: AccountId,
-    prior_promise: Option<u64>,
-    custom_message: Option<String>,
-    amount_near: Balance,
-) -> u64 {
-    let data = get_transfer_call_data(
-        recipient.to_string(),
-        amount.clone(),
-        sender.clone(),
-        custom_message,
+    let transfer_prom = ext_ft::ft_transfer(
+        recipient.clone(),
+        amount.into(),
+        memo,
+        contract_id.clone(),
+        ONE_YOCTO,
+        GAS_FOR_FT_TRANSFER_CALL_NEP141,
     );
 
-    let amount_parsed = amount.0;
-
-    subtract_balance(accounts, &sender, &TokenId::new_ft(token_id.clone()), amount_parsed);
-
     let ft_transfer_prom = match prior_promise {
-        None => {
-            let prom_batch = env::promise_batch_create(token_id);
-            env::promise_batch_action_function_call(
-                prom_batch,
-                FT_TRANSFER_CALL_METHOD_NAME,
-                &data,
-                amount_near,
-                GAS_FOR_FT_TRANSFER_CALL_NEP141,
-            );
-            prom_batch
-        }
-        Some(prior_prom) => env::promise_then(
-            prior_prom,
-            token_id.clone(),
-            FT_TRANSFER_CALL_METHOD_NAME,
-            &data,
-            amount_near,
-            GAS_FOR_FT_TRANSFER_CALL_NEP141,
-        ),
+        None => transfer_prom,
+        Some(prior_prom) => prior_prom.then(transfer_prom),
     };
-    let internal_resolve_args =
-        get_internal_resolve_data(&sender, &TokenId::new_ft(token_id.clone()), amount, true)
-            .unwrap();
-    env::promise_then(
-        ft_transfer_prom,
-        env::current_account_id(),
-        RESOLVE_WITHDRAW_NAME,
-        internal_resolve_args.to_string().as_bytes(),
-        0,
-        GAS_FOR_INTERNAL_RESOLVE,
+
+    ft_transfer_prom.then(
+        get_internal_resolve_promise(
+            &sender,
+            &TokenId::new_ft(contract_id.clone()),
+            U128::from(amount),
+            false,
+        )
+        .unwrap(),
     )
 }
 
-fn get_transfer_call_data(
-    recipient: String,
-    amount: U128,
-    sender: AccountId,
-    custom_message: Option<String>,
-) -> Vec<u8> {
-    if let Some(msg) = custom_message {
-        json!({ "receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
-    } else {
-        let on_transfer_opts = OnTransferOpts { sender_id: sender };
-        // TODO: unwrapping ok?
-        json!({ "receiver_id": recipient, "amount": amount, "msg": serde_json::to_string(&on_transfer_opts).unwrap() })
-					.to_string()
-					.into_bytes()
-    }
-}
+// fn get_transfer_call_data(
+//     recipient: String,
+//     amount: U128,
+//     sender: AccountId,
+//     custom_message: Option<String>,
+// ) -> Vec<u8> {
+//     if let Some(msg) = custom_message {
+//         json!({ "receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
+//     } else {
+//         let on_transfer_opts = OnTransferOpts { sender_id: sender };
+//         // TODO: unwrapping ok?
+//         json!({ "receiver_id": recipient, "amount": amount, "msg": serde_json::to_string(&on_transfer_opts).unwrap() })
+// 					.to_string()
+// 					.into_bytes()
+//     }
+// }
 
 /********** Helper functions **************/
 
@@ -358,15 +270,15 @@ mod tests {
     }
 }
 
-fn get_transfer_data(
-    recipient: AccountId,
-    amount: U128,
-    sender: AccountId,
-    custom_message: Option<String>,
-) -> Vec<u8> {
-    if let Some(msg) = custom_message {
-        json!({"receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
-    } else {
-        json!({"receiver_id": recipient, "amount": amount}).to_string().into_bytes()
-    }
-}
+// fn get_transfer_data(
+//     recipient: AccountId,
+//     amount: U128,
+//     sender: AccountId,
+//     custom_message: Option<String>,
+// ) -> Vec<u8> {
+//     if let Some(msg) = custom_message {
+//         json!({"receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
+//     } else {
+//         json!({"receiver_id": recipient, "amount": amount}).to_string().into_bytes()
+//     }
+// }

@@ -85,6 +85,16 @@ macro_rules! impl_near_balance_plugin {
                 $crate::ft::ft_on_transfer(&mut self.$accounts, sender_id, amount, msg)
             }
 
+            fn mt_on_transfer(
+                &mut self,
+                sender_id: AccountId,
+                token_ids: Vec<String>,
+                amounts: Vec<U128>,
+                msg: String,
+            ) -> Vec<U128> {
+                $crate::mt::mt_on_transfer(&mut self.$accounts, sender_id, token_ids, amounts, msg)
+            }
+
             fn nft_on_transfer(
                 &mut self,
                 sender_id: AccountId,
@@ -136,7 +146,7 @@ macro_rules! impl_near_balance_plugin {
                 token_id: $crate::token_id::TokenId,
                 recipient: Option<AccountId>,
                 msg: Option<String>,
-            ) {
+            ) -> near_sdk::Promise{
                 $crate::core_impl::internal_balance_withdraw_to(
                     &mut self.$accounts,
                     amount.into(),

@@ -13,7 +13,7 @@ use near_sdk::{
 pub mod core_impl;
 pub mod ft;
 mod macros;
-mod mt;
+pub mod mt;
 pub mod nft;
 pub mod token_id;
 pub use macros::*;
@@ -63,8 +63,14 @@ pub trait InternalBalanceHandlers {
         msg: String,
     ) -> bool;
 
-    // TODO:
-    // fn nft_on_transfer(&mut self, sender_id: String, amount: String, msg: String) -> String;
+    fn mt_on_transfer(
+        &mut self,
+        sender_id: AccountId,
+        token_ids: Vec<String>,
+        amounts: Vec<U128>,
+        msg: String,
+    ) -> Vec<U128>;
+
     fn internal_balance_get_balance(&self, account_id: AccountId, token_id: TokenId) -> U128;
     fn resolve_internal_withdraw_call(
         &mut self,
@@ -80,7 +86,7 @@ pub trait InternalBalanceHandlers {
         token_id: TokenId,
         recipient: Option<AccountId>,
         msg: Option<String>,
-    ) -> ();
+    ) -> Promise;
 
     fn internal_balance_transfer(
         &mut self,

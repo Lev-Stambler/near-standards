@@ -1,15 +1,15 @@
 use near_account::Accounts;
 use near_sdk::{
-    assert_one_yocto, env,
+    assert_one_yocto, env, ext_contract,
     json_types::U128,
     log,
     serde_json::{self, json},
-    AccountId, Balance, Gas,
+    AccountId, Balance, Gas, Promise, ONE_YOCTO,
 };
 
 use crate::{
     core_impl::{
-        get_internal_resolve_data, increase_balance, subtract_balance, AccountInfoTrait,
+        get_internal_resolve_promise, increase_balance, subtract_balance, AccountInfoTrait,
         GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE, RESOLVE_WITHDRAW_NAME,
     },
     token_id::TokenId,
@@ -23,6 +23,16 @@ const NFT_TRANSFER_METHOD_NAME: &str = "nft_transfer";
 const GAS_FOR_NFT_RESOLVE_TRANSFER_NEP171: Gas = Gas(5_000_000_000_000);
 const GAS_FOR_ON_TRANSFER_NEP171: Gas = Gas(5_000_000_000_000);
 const GAS_FOR_NFT_TRANSFER_CALL_NEP171: Gas = Gas(25_000_000_000_000 + 3 * 5_000_000_000_000);
+
+#[ext_contract(ext_nft)]
+trait NFTContract {
+    fn nft_transfer(
+        &mut self,
+        receiver_id: AccountId,
+        token_id: String,
+        memo: Option<String>,
+    ) -> Promise;
+}
 
 pub fn nft_on_transfer<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
@@ -52,7 +62,7 @@ pub fn nft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     token_id: String,
     recipient: Option<AccountId>,
     msg: Option<String>,
-) {
+) -> Promise {
     assert_one_yocto();
     let caller = env::predecessor_account_id();
 
@@ -63,7 +73,7 @@ pub fn nft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
 
     let prom =
         internal_nft_withdraw(accounts, &caller, contract_id, token_id, recipient, msg, None);
-    env::promise_return(prom);
+    prom
 }
 
 fn internal_nft_withdraw<Info: AccountInfoTrait>(
@@ -72,45 +82,28 @@ fn internal_nft_withdraw<Info: AccountInfoTrait>(
     contract_id: AccountId,
     token_id: String,
     recipient: AccountId,
-    msg: Option<String>,
-    prior_promise: Option<u64>,
-) -> u64 {
-    let data = get_transfer_data(recipient, &token_id, msg);
-
+    memo: Option<String>,
+    prior_promise: Option<Promise>,
+) -> Promise {
     let internal_tok_id =
         TokenId::NFT { contract_id: contract_id.clone(), token_id: token_id.clone() };
     subtract_balance(accounts, sender, &internal_tok_id, 1);
 
-    let ft_transfer_prom = match prior_promise {
-        None => {
-            let prom = env::promise_batch_create(&contract_id);
-            env::promise_batch_action_function_call(
-                prom,
-                NFT_TRANSFER_METHOD_NAME,
-                &data,
-                1,
-                GAS_FOR_NFT_TRANSFER_CALL_NEP171,
-            );
-            prom
-        }
-        Some(prior_prom) => env::promise_then(
-            prior_prom,
-            contract_id.clone(),
-            NFT_TRANSFER_METHOD_NAME,
-            &data,
-            1,
-            GAS_FOR_NFT_TRANSFER_CALL_NEP171,
-        ),
+    let transfer_prom = ext_nft::nft_transfer(
+        recipient.clone(),
+        token_id.clone(),
+        memo,
+        contract_id.clone(),
+        ONE_YOCTO,
+        GAS_FOR_NFT_TRANSFER_CALL_NEP171,
+    );
+    let nft_transfer_prom = match prior_promise {
+        None => transfer_prom,
+        Some(prior_prom) => prior_prom.then(transfer_prom),
     };
-    let internal_resolve_args =
-        get_internal_resolve_data(&sender, &internal_tok_id, U128::from(1), false).unwrap();
-    env::promise_then(
-        ft_transfer_prom,
-        env::current_account_id(),
-        RESOLVE_WITHDRAW_NAME,
-        internal_resolve_args.to_string().as_bytes(),
-        0,
-        GAS_FOR_INTERNAL_RESOLVE,
+
+    nft_transfer_prom.then(
+        get_internal_resolve_promise(&sender, &internal_tok_id, U128::from(1), false).unwrap(),
     )
 }
 

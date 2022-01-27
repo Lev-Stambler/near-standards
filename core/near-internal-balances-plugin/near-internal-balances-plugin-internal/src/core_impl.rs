@@ -1,15 +1,18 @@
 use std::str::FromStr;
 
-use crate::{ft::ft_internal_balance_withdraw_to, nft::nft_internal_balance_withdraw_to};
+use crate::{
+    ft::ft_internal_balance_withdraw_to, mt::mt_internal_balance_withdraw_to,
+    nft::nft_internal_balance_withdraw_to,
+};
 use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo};
 use near_sdk::{
     assert_one_yocto,
     borsh::{BorshDeserialize, BorshSerialize},
-    env,
+    env, ext_contract,
     json_types::U128,
     log,
     serde_json::{self, json},
-    AccountId, Balance, Gas,
+    AccountId, Balance, Gas, Promise, PromiseOrValue,
 };
 
 use crate::{token_id::TokenId, BalanceInfo, OnTransferOpts};
@@ -19,6 +22,17 @@ pub trait AccountInfoTrait: DefaultAccountInfo + BalanceInfo {}
 pub const RESOLVE_WITHDRAW_NAME: &str = "resolve_internal_withdraw_call";
 pub const GAS_BUFFER: Gas = Gas(5_000_000_000_000u64);
 pub const GAS_FOR_INTERNAL_RESOLVE: Gas = Gas(5_000_000_000_000u64);
+
+#[ext_contract(ext_self_internal)]
+pub trait InternalBalanceResolver {
+    fn resolve_internal_withdraw_call(
+        &mut self,
+        account_id: AccountId,
+        token_id: TokenId,
+        amount: U128,
+        is_call: bool,
+    ) -> PromiseOrValue<U128>;
+}
 
 pub fn internal_balance_get_balance<Info: AccountInfoTrait>(
     account: &Account<Info>,
@@ -71,15 +85,24 @@ pub fn resolve_internal_withdraw_call<Info: AccountInfoTrait>(
     }
 }
 
-pub fn get_internal_resolve_data(
+pub fn get_internal_resolve_promise(
     sender: &AccountId,
     token_id: &TokenId,
     amount: U128,
     is_call: bool,
-) -> Result<String, serde_json::error::Error> {
+) -> Result<Promise, serde_json::error::Error> {
     let internal_resolve_args =
         json!({"account_id": sender, "token_id": token_id, "amount": amount, "is_call": is_call});
-    Ok(internal_resolve_args.to_string())
+    // Ok(internal_resolve_args.to_string())
+    Ok(ext_self_internal::resolve_internal_withdraw_call(
+        sender.clone(),
+        token_id.clone(),
+        amount,
+        is_call,
+        env::current_account_id(),
+        0,
+        GAS_FOR_INTERNAL_RESOLVE,
+    ))
 }
 
 /// Get the cost of adding 1 balance to a user's account
@@ -114,17 +137,20 @@ pub fn internal_balance_withdraw_to<Info: AccountInfoTrait>(
     token_id: &TokenId,
     recipient: Option<AccountId>,
     msg: Option<String>,
-) {
+) -> Promise {
     assert_one_yocto();
-    log!("AAAAAAAAAAA");
-    let caller = env::predecessor_account_id();
     match token_id {
         TokenId::FT { contract_id } => {
             ft_internal_balance_withdraw_to(accounts, amount, contract_id.clone(), recipient, msg)
         }
-        TokenId::MT { contract_id, token_id } => {
-            todo!()
-        }
+        TokenId::MT { contract_id, token_id } => mt_internal_balance_withdraw_to(
+            accounts,
+            amount,
+            contract_id.clone(),
+            token_id.to_string(),
+            recipient,
+            msg,
+        ),
         TokenId::NFT { contract_id, token_id } => nft_internal_balance_withdraw_to(
             accounts,
             contract_id.clone(),
