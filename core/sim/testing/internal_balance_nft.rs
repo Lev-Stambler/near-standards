@@ -20,7 +20,7 @@ fn has_nft(nft: &ContractAccount<nft::ContractContract>, account: AccountId) -> 
 }
 
 #[test]
-fn simulate_nft_simple_internal_balances_test() {
+fn simulate_nft_simple_internal_balances_test_no_sender_id() {
     let (root, dummy, ft, nft, mt, alice) = init(DEFAULT_TOTAL_SUPPLY);
     let amount_transfer = 1;
 
@@ -36,7 +36,6 @@ fn simulate_nft_simple_internal_balances_test() {
         deposit = 1
     );
 
-    println!("{:?}", ret.logs());
     ret.assert_success();
 
     let nft_id = TokenId::NFT { contract_id: nft.account_id(), token_id: NFT_TOKEN_ID.to_string() };
@@ -48,16 +47,19 @@ fn simulate_nft_simple_internal_balances_test() {
     assert!(root_has_nft == false);
 
     // Withdraw back into the callee's account
-    call!(root, dummy.internal_balance_withdraw_to(amount_transfer.into(), nft_id.clone(), None, None), deposit = 1)
-        .assert_success();
+    call!(
+        root,
+        dummy.internal_balance_withdraw_to(amount_transfer.into(), nft_id.clone(), None, None),
+        deposit = 1
+    )
+    .assert_success();
 
     let root_has_nft = has_nft(&nft, root.account_id());
-    let ft_bal_root_post_withdraw: U128 = view!(ft.ft_balance_of(root.account_id())).unwrap_json();
     assert_eq!(root_has_nft, true);
-    assert_eq!(ft_bal_root_post_withdraw.0, 0);
 }
+
 #[test]
-fn simulate_simple_internal_balances_test_with_sender_id() {
+fn simulate_nft_simple_internal_balances_test_with_sender_id() {
     let (root, dummy, ft, nft, mt, alice) = init(DEFAULT_TOTAL_SUPPLY);
     let amount_transfer = 1_000;
 
@@ -66,9 +68,10 @@ fn simulate_simple_internal_balances_test_with_sender_id() {
 
     call!(
         root,
-        ft.ft_transfer_call(
+        nft.nft_transfer_call(
             dummy.account_id(),
-            amount_transfer.into(),
+            NFT_TOKEN_ID.to_string(),
+            None,
             None,
             json!({"sender_id": alice.account_id()}).to_string()
         ),
@@ -76,22 +79,22 @@ fn simulate_simple_internal_balances_test_with_sender_id() {
     )
     .assert_success();
 
-    let ft_bal_alice_internal: U128 =
-        view!(dummy.internal_balance_get_balance(alice.account_id(), ft_id.clone())).unwrap_json();
-    let ft_bal_root_post_transfer: U128 = view!(ft.ft_balance_of(root.account_id())).unwrap_json();
+    let nft_id = TokenId::NFT { contract_id: nft.account_id(), token_id: NFT_TOKEN_ID.to_string() };
+    let nft_bal_alice_internal: U128 =
+        view!(dummy.internal_balance_get_balance(alice.account_id(), nft_id.clone())).unwrap_json();
 
-    assert_eq!(ft_bal_root.0 - ft_bal_root_post_transfer.0, amount_transfer);
-    assert_eq!(ft_bal_alice_internal.0, amount_transfer);
+    let root_has_nft = has_nft(&nft, root.account_id());
+    assert_eq!(nft_bal_alice_internal.0, amount_transfer);
+    assert!(root_has_nft == false);
 
     // Withdraw back into the callee's account
-    call!(alice, dummy.internal_balance_withdraw_to(amount_transfer.into(), ft_id.clone(), None, None), deposit = 1)
-        .assert_success();
+    call!(
+        alice,
+        dummy.internal_balance_withdraw_to(amount_transfer.into(), nft_id.clone(), None, None),
+        deposit = 1
+    )
+    .assert_success();
 
-    let ft_bal_alice_post_withdraw: U128 =
-        view!(ft.ft_balance_of(alice.account_id())).unwrap_json();
-    assert_eq!(amount_transfer, ft_bal_alice_post_withdraw.0);
-
-    let ft_bal_alice_internal: U128 =
-        view!(dummy.internal_balance_get_balance(alice.account_id(), ft_id.clone())).unwrap_json();
-    assert_eq!(ft_bal_alice_internal.0, 0);
+    let alice_has_nft = has_nft(&nft, alice.account_id());
+    assert_eq!(alice_has_nft, true);
 }

@@ -12,9 +12,9 @@ use near_sdk::{
 
 pub mod core_impl;
 pub mod ft;
+mod macros;
 mod mt;
 pub mod nft;
-mod macros;
 pub mod token_id;
 pub use macros::*;
 pub use token_id::TokenId;

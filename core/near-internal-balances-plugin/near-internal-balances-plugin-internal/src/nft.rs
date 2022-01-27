@@ -43,7 +43,7 @@ pub fn nft_on_transfer<Info: AccountInfoTrait>(
     let amount = 1;
     increase_balance(accounts, &opts.sender_id, &token_id, amount);
 
-    true
+    false
 }
 
 pub fn nft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
@@ -255,7 +255,7 @@ mod tests {
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1);
-				// TODO: should we limit the tok bal to 1 for NFT?
+        // TODO: should we limit the tok bal to 1 for NFT?
     }
 }
 
