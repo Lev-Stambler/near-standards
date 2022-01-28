@@ -70,8 +70,6 @@ fn run_internal_balance_test(
     assert_eq!(amount_transfer, mt_bal_post_withdraw.0 - mt_bal_pre_withdraw.0);
 }
 
-fn run_internal_balance_test_with_sender() {}
-
 #[test]
 fn simulate_mt_ft_simple_internal_balances_test() {
     run_internal_balance_test(MT_FT_ID, None, true);

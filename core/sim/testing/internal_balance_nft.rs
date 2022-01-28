@@ -61,10 +61,7 @@ fn simulate_nft_simple_internal_balances_test_no_sender_id() {
 #[test]
 fn simulate_nft_simple_internal_balances_test_with_sender_id() {
     let (root, dummy, ft, nft, mt, alice) = init(DEFAULT_TOTAL_SUPPLY);
-    let amount_transfer = 1_000;
-
-    let ft_bal_root: U128 = view!(ft.ft_balance_of(root.account_id())).unwrap_json();
-    let ft_id = TokenId::FT { contract_id: ft.account_id() };
+    let amount_transfer = 1;
 
     call!(
         root,
