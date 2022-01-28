@@ -9,7 +9,7 @@ use near_sdk::{
 
 use crate::{
     core_impl::{
-        get_internal_resolve_promise, increase_balance, subtract_balance, AccountInfoTrait,
+        get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract, AccountInfoTrait,
         GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE, RESOLVE_WITHDRAW_NAME,
     },
     token_id::TokenId,
@@ -55,7 +55,7 @@ pub fn mt_on_transfer<Info: AccountInfoTrait>(
     for i in 0..token_ids.len() {
         let token_id =
             TokenId::MT { contract_id: env::predecessor_account_id(), token_id: token_ids[i].clone() };
-        increase_balance(accounts, &opts.sender_id, &token_id, amounts[i].0)
+        internal_balance_increase(accounts, &opts.sender_id, &token_id, amounts[i].0)
     }
 
     vec![0.into(); token_ids.len()]
@@ -118,7 +118,7 @@ fn internal_mt_withdraw<Info: AccountInfoTrait>(
     let internal_token_id =
         TokenId::MT { contract_id: contract_id.clone(), token_id: token_id.clone() };
 
-    subtract_balance(accounts, sender, &internal_token_id, amount);
+    internal_balance_subtract(accounts, sender, &internal_token_id, amount);
 
     prom.then(
         get_internal_resolve_promise(&sender, &internal_token_id, U128::from(amount), false)
@@ -233,12 +233,12 @@ mod tests {
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_000);
 
-        subtract_balance(&mut near_accounts, &account, &tok_id, 100);
+        internal_balance_subtract(&mut near_accounts, &account, &tok_id, 100);
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 900);
 
-        subtract_balance(&mut near_accounts, &account, &tok_id, 100);
+        internal_balance_subtract(&mut near_accounts, &account, &tok_id, 100);
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 800);

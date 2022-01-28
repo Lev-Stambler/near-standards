@@ -9,7 +9,7 @@ use near_sdk::{
 
 use crate::{
     core_impl::{
-        get_internal_resolve_promise, increase_balance, subtract_balance, AccountInfoTrait,
+        get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract, AccountInfoTrait,
         GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE, RESOLVE_WITHDRAW_NAME,
     },
     token_id::TokenId,
@@ -45,7 +45,7 @@ pub fn ft_on_transfer<Info: AccountInfoTrait>(
     };
     let token_id = env::predecessor_account_id();
     let amount = amount.parse::<u128>().unwrap();
-    increase_balance(accounts, &opts.sender_id, &TokenId::FT { contract_id: token_id }, amount);
+    internal_balance_increase(accounts, &opts.sender_id, &TokenId::FT { contract_id: token_id }, amount);
 
     "0".to_string()
 }
@@ -78,7 +78,7 @@ fn internal_ft_withdraw<Info: AccountInfoTrait>(
     memo: Option<String>,
     prior_promise: Option<Promise>,
 ) -> Promise {
-    subtract_balance(accounts, sender, &TokenId::new_ft(contract_id.clone()), amount);
+    internal_balance_subtract(accounts, sender, &TokenId::new_ft(contract_id.clone()), amount);
 
     let transfer_prom = ext_ft::ft_transfer(
         recipient.clone(),
@@ -225,12 +225,12 @@ mod tests {
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_000);
 
-        subtract_balance(&mut near_accounts, &account, &tok_id, 100);
+        internal_balance_subtract(&mut near_accounts, &account, &tok_id, 100);
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 900);
 
-        subtract_balance(&mut near_accounts, &account, &tok_id, 100);
+        internal_balance_subtract(&mut near_accounts, &account, &tok_id, 100);
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 800);

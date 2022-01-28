@@ -59,7 +59,7 @@ pub fn resolve_internal_withdraw_call<Info: AccountInfoTrait>(
     match near_sdk::utils::promise_result_as_success() {
         None => {
             log!("The FT transfer call failed, redepositing funds");
-            increase_balance(accounts, account_id, &token_id, amount);
+            internal_balance_increase(accounts, account_id, &token_id, amount);
             U128(0)
         }
         Some(data) => {
@@ -78,7 +78,7 @@ pub fn resolve_internal_withdraw_call<Info: AccountInfoTrait>(
             let amount_unused = amount - amount_used;
             log!("Amount unused {}", amount_unused);
             if amount_unused > 0 {
-                increase_balance(accounts, account_id, &token_id, amount_unused);
+                internal_balance_increase(accounts, account_id, &token_id, amount_unused);
             }
             U128(amount_used)
         }
@@ -106,7 +106,7 @@ pub fn get_internal_resolve_promise(
 }
 
 /// Get the cost of adding 1 balance to a user's account
-pub fn get_storage_cost_for_one_balance<Info: AccountInfoTrait>(
+pub fn internal_balance_get_storage_cost<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     token_id: TokenId,
 ) -> Balance {
@@ -173,11 +173,11 @@ pub fn internal_balance_transfer<Info: AccountInfoTrait>(
     if let Some(msg) = msg {
         log!("Balance transfer message: {}", msg);
     }
-    subtract_balance(accounts, &caller, token_id, amount);
-    increase_balance(accounts, &recipient, token_id, amount);
+    internal_balance_subtract(accounts, &caller, token_id, amount);
+    internal_balance_increase(accounts, &recipient, token_id, amount);
 }
 
-pub fn increase_balance<Info: AccountInfoTrait>(
+pub fn internal_balance_increase<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     account_id: &AccountId,
     token_id: &TokenId,
@@ -199,7 +199,7 @@ pub fn increase_balance<Info: AccountInfoTrait>(
     accounts.insert_account_check_storage(account_id, &mut account);
 }
 
-pub fn subtract_balance<Info: AccountInfoTrait>(
+pub fn internal_balance_subtract<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     account_id: &AccountId,
     token: &TokenId,

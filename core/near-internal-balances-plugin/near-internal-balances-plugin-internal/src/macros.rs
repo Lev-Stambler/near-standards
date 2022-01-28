@@ -18,13 +18,13 @@ macro_rules! impl_near_balance_plugin {
         impl $crate::core_impl::AccountInfoTrait for $info_struct {}
 
         impl SudoInternalBalanceHandlers for $contract_struct {
-            fn subtract_balance(
+            fn internal_balance_subtract(
                 &mut self,
                 account_id: &AccountId,
                 token_id: &TokenId,
                 amount: Balance,
             ) {
-                $crate::core_impl::subtract_balance(
+                $crate::core_impl::internal_balance_subtract(
                     &mut self.$accounts,
                     account_id,
                     token_id,
@@ -32,17 +32,17 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
 
-            fn get_storage_cost_for_one_balance(&mut self, token_id: TokenId) -> Balance {
-                $crate::core_impl::get_storage_cost_for_one_balance(&mut self.$accounts, token_id)
+            fn internal_balance_get_storage_cost(&mut self, token_id: TokenId) -> Balance {
+                $crate::core_impl::internal_balance_get_storage_cost(&mut self.$accounts, token_id)
             }
 
-            fn increase_balance(
+            fn internal_balance_increase(
                 &mut self,
                 account_id: &AccountId,
                 token_id: &TokenId,
                 amount: Balance,
             ) {
-                $crate::core_impl::increase_balance(
+                $crate::core_impl::internal_balance_increase(
                     &mut self.$accounts,
                     account_id,
                     token_id,
@@ -50,7 +50,7 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
 
-            fn get_balance_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance {
+            fn internal_balance_get_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance {
                 self.$accounts
                     .get_account(&account_id)
                     .map(|a| $crate::core_impl::internal_balance_get_balance(&a, &token_id))

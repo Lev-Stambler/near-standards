@@ -143,7 +143,7 @@ impl Contract {
                     symbol: "aa".to_string(), // required, ex. "MOSIAC"
                     icon: None,               // Data URL
                     base_uri: None, // Centralized gateway known to have reliable access to decentralized storage assets referenced by `reference` or `media` URLs
-                    decimals: None, // precision decimals for tokens that need this information
+                    decimals: Some(12), // precision decimals for tokens that need this information
                     reference: None, // URL to a JSON file with more info
                     reference_hash: None, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
                     title: None,          // ex. "Arch Nemesis: Mail Carrier" or "Parcel #5055"

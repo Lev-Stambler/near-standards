@@ -9,7 +9,7 @@ use near_sdk::{
 
 use crate::{
     core_impl::{
-        get_internal_resolve_promise, increase_balance, subtract_balance, AccountInfoTrait,
+        get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract, AccountInfoTrait,
         GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE, RESOLVE_WITHDRAW_NAME,
     },
     token_id::TokenId,
@@ -51,7 +51,7 @@ pub fn nft_on_transfer<Info: AccountInfoTrait>(
     let contract_id = env::predecessor_account_id();
     let token_id = TokenId::NFT { contract_id, token_id };
     let amount = 1;
-    increase_balance(accounts, &opts.sender_id, &token_id, amount);
+    internal_balance_increase(accounts, &opts.sender_id, &token_id, amount);
 
     false
 }
@@ -87,7 +87,7 @@ fn internal_nft_withdraw<Info: AccountInfoTrait>(
 ) -> Promise {
     let internal_tok_id =
         TokenId::NFT { contract_id: contract_id.clone(), token_id: token_id.clone() };
-    subtract_balance(accounts, sender, &internal_tok_id, 1);
+    internal_balance_subtract(accounts, sender, &internal_tok_id, 1);
 
     let transfer_prom = ext_nft::nft_transfer(
         recipient.clone(),
@@ -218,7 +218,7 @@ mod tests {
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1);
 
-        subtract_balance(&mut near_accounts, &account, &tok_id, 1);
+        internal_balance_subtract(&mut near_accounts, &account, &tok_id, 1);
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 0);

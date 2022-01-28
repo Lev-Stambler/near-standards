@@ -35,13 +35,13 @@ pub trait BalanceInfo {
 
 pub trait SudoInternalBalanceHandlers {
     /// Do a checked subtraction of an account balance
-    fn subtract_balance(&mut self, account_id: &AccountId, token_id: &TokenId, amount: Balance);
+    fn internal_balance_subtract(&mut self, account_id: &AccountId, token_id: &TokenId, amount: Balance);
     /// Do a checked addition to an account balance
-    fn increase_balance(&mut self, account_id: &AccountId, token_id: &TokenId, amount: Balance);
+    fn internal_balance_increase(&mut self, account_id: &AccountId, token_id: &TokenId, amount: Balance);
     /// Same as get_ft_balance but without the serializable types
-    fn get_balance_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance;
+    fn internal_balance_get_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance;
     /// Get the storage cost for one balance account
-    fn get_storage_cost_for_one_balance(&mut self, token_id: TokenId) -> Balance;
+    fn internal_balance_get_storage_cost(&mut self, token_id: TokenId) -> Balance;
     /// Same as balance transfer but internal types
     fn internal_balance_transfer_internal(
         &mut self,
