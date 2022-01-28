@@ -159,6 +159,21 @@ pub fn init_with_macros(
         deposit = near_sdk::env::storage_byte_cost() * 1_000
     )
     .assert_success();
+
+    // Create the mt ft
+    call!(
+        root,
+        mt.mint(
+            MT_FT_ID.to_string(),
+            TokenType::Ft,
+            Some(ft_total_supply.into()),
+            root.account_id(),
+            None
+        ),
+        deposit = near_sdk::env::storage_byte_cost() * 1_000
+    )
+    .assert_success();
+
     call!(
         root,
         nft.nft_mint(NFT_TOKEN_ID.to_string(), root.account_id(), DEFAULT_META),
@@ -179,6 +194,22 @@ pub fn init_with_macros(
         .into_bytes(),
         near_sdk_sim::DEFAULT_GAS / 2,
         near_sdk::env::storage_byte_cost() * 125, // attached deposit
+    )
+    .assert_success();
+
+    // Register the dummy contract with MT
+    root.call(
+        AccountId::from_str(MT_ID).unwrap(),
+        "storage_deposit",
+        &json!({
+                "account_id": dummy.account_id(),
+                "token_ids": vec![MT_NFT_ID.to_string(), MT_FT_ID.to_string()],
+                "registration_only": false,
+        })
+        .to_string()
+        .into_bytes(),
+        near_sdk_sim::DEFAULT_GAS / 2,
+        near_sdk::env::storage_byte_cost() * 325, // attached deposit
     )
     .assert_success();
 
