@@ -13,6 +13,10 @@ macro_rules! impl_near_balance_plugin {
             fn set_balance(&mut self, token_id: &$crate::token_id::TokenId, balance: Balance) {
                 self.$balance_map.insert(token_id, &balance);
             }
+
+            fn get_all_tokens(&self) -> Vec<TokenId> {
+                self.$balance_map.keys().collect()
+            }
         }
 
         impl $crate::core_impl::AccountInfoTrait for $info_struct {}
@@ -50,7 +54,11 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
 
-            fn internal_balance_get_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance {
+            fn internal_balance_get_internal(
+                &self,
+                account_id: &AccountId,
+                token_id: &TokenId,
+            ) -> Balance {
                 self.$accounts
                     .get_account(&account_id)
                     .map(|a| $crate::core_impl::internal_balance_get_balance(&a, &token_id))
@@ -124,6 +132,16 @@ macro_rules! impl_near_balance_plugin {
                 U128::from(bal)
             }
 
+            fn internal_balance_get_all_balances(
+                &self,
+                account_id: AccountId,
+            ) -> Vec<(TokenId, U128)> {
+                $crate::core_impl::internal_balance_get_all_balances(
+                    &self.$accounts,
+                    &account_id,
+                )
+            }
+
             fn internal_balance_transfer(
                 &mut self,
                 recipient: AccountId,
@@ -146,7 +164,7 @@ macro_rules! impl_near_balance_plugin {
                 token_id: $crate::token_id::TokenId,
                 recipient: Option<AccountId>,
                 msg: Option<String>,
-            ) -> near_sdk::Promise{
+            ) -> near_sdk::Promise {
                 $crate::core_impl::internal_balance_withdraw_to(
                     &mut self.$accounts,
                     amount.into(),

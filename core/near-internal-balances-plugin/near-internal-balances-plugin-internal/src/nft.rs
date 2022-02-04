@@ -41,7 +41,6 @@ pub fn nft_on_transfer<Info: AccountInfoTrait>(
     token_id: String,
     msg: String,
 ) -> bool {
-    log!("GOT HERE?");
     let opts: OnTransferOpts = if (&msg).len() == 0 {
         OnTransferOpts { sender_id: previous_owner_id.clone().into() }
     } else {

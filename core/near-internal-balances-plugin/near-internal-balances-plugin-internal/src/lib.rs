@@ -1,4 +1,5 @@
 use near_account::{Account, Accounts};
+use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
@@ -31,13 +32,24 @@ pub struct OnTransferOpts {
 pub trait BalanceInfo {
     fn get_balance(&self, token_id: &TokenId) -> Balance;
     fn set_balance(&mut self, token_id: &TokenId, balance: Balance);
+    fn get_all_tokens(&self) -> Vec<TokenId>;
 }
 
 pub trait SudoInternalBalanceHandlers {
     /// Do a checked subtraction of an account balance
-    fn internal_balance_subtract(&mut self, account_id: &AccountId, token_id: &TokenId, amount: Balance);
+    fn internal_balance_subtract(
+        &mut self,
+        account_id: &AccountId,
+        token_id: &TokenId,
+        amount: Balance,
+    );
     /// Do a checked addition to an account balance
-    fn internal_balance_increase(&mut self, account_id: &AccountId, token_id: &TokenId, amount: Balance);
+    fn internal_balance_increase(
+        &mut self,
+        account_id: &AccountId,
+        token_id: &TokenId,
+        amount: Balance,
+    );
     /// Same as get_ft_balance but without the serializable types
     fn internal_balance_get_internal(&self, account_id: &AccountId, token_id: &TokenId) -> Balance;
     /// Get the storage cost for one balance account
@@ -72,6 +84,9 @@ pub trait InternalBalanceHandlers {
     ) -> Vec<U128>;
 
     fn internal_balance_get_balance(&self, account_id: AccountId, token_id: TokenId) -> U128;
+
+    fn internal_balance_get_all_balances(&self, account_id: AccountId) -> Vec<(TokenId, U128)>;
+
     fn resolve_internal_withdraw_call(
         &mut self,
         account_id: AccountId,

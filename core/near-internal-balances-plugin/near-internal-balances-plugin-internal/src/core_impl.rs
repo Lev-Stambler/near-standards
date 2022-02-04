@@ -5,6 +5,7 @@ use crate::{
     nft::nft_internal_balance_withdraw_to,
 };
 use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo};
+use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{
     assert_one_yocto,
     borsh::{BorshDeserialize, BorshSerialize},
@@ -39,6 +40,21 @@ pub fn internal_balance_get_balance<Info: AccountInfoTrait>(
     token_id: &TokenId,
 ) -> u128 {
     account.info.get_balance(token_id)
+}
+
+pub fn internal_balance_get_all_balances<Info: AccountInfoTrait>(
+    accounts: &Accounts<Info>,
+    account_id: &AccountId,
+) -> Vec<(TokenId, U128)> {
+    let account = accounts.get_account_checked(account_id);
+    let tokens = account.info.get_all_tokens();
+    tokens
+        .iter()
+        .map(|t| {
+            let bal = account.info.get_balance(&t);
+            (t.clone(), U128::from(bal))
+        })
+        .collect()
 }
 
 /// Resolve the ft transfer by updating the amount used in the balances

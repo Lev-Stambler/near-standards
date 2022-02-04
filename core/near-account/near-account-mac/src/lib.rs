@@ -46,6 +46,10 @@ pub fn near_accounts(input: TokenStream) -> TokenStream {
             pub fn accounts_storage_balance_of(&self, account_id: near_sdk::AccountId) -> Option<near_contract_standards::storage_management::StorageBalance> {
                 self.accounts.storage_balance_of(account_id)
             }
+
+            pub fn accounts_near_balance_of(&self, account_id: near_sdk::AccountId) -> Option<near_contract_standards::storage_management::StorageBalance> {
+                self.accounts.storage_balance_of(account_id)
+            }
         }
     };
     TokenStream::from(stream)
