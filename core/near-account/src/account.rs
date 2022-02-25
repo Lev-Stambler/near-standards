@@ -8,6 +8,8 @@ use near_sdk::{
 
 use crate::{Accounts, NewInfo};
 
+/// The `Info` struct must implement this trait which consists of the composition of
+/// BorshSerialize, BorshDeserialize, and NewInfo
 pub trait AccountInfoTrait: BorshSerialize + BorshDeserialize + NewInfo {}
 
 /// Account information and storage cost.
@@ -29,6 +31,7 @@ impl<Info: AccountInfoTrait> NewInfo for Account<Info> {
     }
 }
 
+/// Functions for dealing with Near Deposits for an individual account
 pub trait AccountDeposits<Info: AccountInfoTrait> {
     /// Check that storage is paid for and call the closure function
     fn check_storage<F, T: Sized>(&mut self, accounts: &mut Accounts<Info>, closure: F) -> T

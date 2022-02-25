@@ -1,3 +1,44 @@
+//! near-accounts allows for keeping track of data associated with an account
+//! as well as storage management.
+//!
+//! Usage is quite simple. First define a struct for what info the contract should store for each account
+//! So, for example, if the contract intends to keep track of a message associated with each user
+//! ```rust
+//! #[derive(BorshDeserialize, BorshSerialize)]
+//! pub struct AccountInfo {
+//!     pub message: String,
+//! }
+//! ```
+//! Then, the contract must implement the `NewInfo` trait for `AccountInfo`, so, for example
+//! ```rust
+//!   impl NewInfo for AccountInfo {
+//!   fn default_from_account_id(account_id: AccountId) -> Self {
+//!       Self {
+//!           message: "".to_string(),
+//!           internal_balance: UnorderedMap::new(format!("{}-bal", account_id).as_bytes()),
+//!       }
+//!   }
+//!  }
+//! ```
+//!
+//! Finally, all that is left to do is define the contract and call the implementing macro
+//! ```rust
+//! #[near_bindgen]
+//! #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+//! pub struct Contract {
+//!     pub accounts: Accounts<AccountInfo>,
+//! }
+//!
+//! impl_near_accounts_plugin!(Contract, accounts, AccountInfo);
+//! ```
+//! 
+//! For documentation on externally defined functions, please see the
+//! [NearAccountPlugin trait](trait.NearAccountPlugin.html)
+//!
+//! For documentation on functions for internal contract use, please see the
+//! [NearAccountsPluginNonExternal trait](trait.NearAccountsPluginNonExternal.html)
+//! and the [AccountDeposits trait](trait.AccountDeposits)
+
 use std::str::FromStr;
 
 use near_contract_standards::storage_management::{
@@ -18,37 +59,93 @@ pub mod macros;
 pub use account::Account;
 pub use account::{AccountDeposits, AccountInfoTrait};
 
+/// A trait of the `AccountInfo` struct describing how to construct a default new account
 pub trait NewInfo {
     fn default_from_account_id(account_id: AccountId) -> Self;
 }
 
+/// Defines the functions which will be exposed as methods for the smart contract
 pub trait NearAccountPlugin {
+    /// Allows for deposit into an account
+    /// The amount deposited will be dependent on the amount of attached Near
+    /// If an account is not initialized, the minimum amount attached must cover
+    /// the storage deposit for initializing an account
     fn accounts_storage_deposit(
         &mut self,
         account_id: Option<near_sdk::AccountId>,
         registration_only: Option<bool>,
     ) -> near_contract_standards::storage_management::StorageBalance;
 
+    /// Allows to withdraw any Near that is attached to an account
+    /// but is not currently being used to cover storage
     fn accounts_storage_withdraw(
         &mut self,
         amount: Option<near_sdk::json_types::U128>,
     ) -> near_contract_standards::storage_management::StorageBalance;
 
+    /// Unregister an account. Unregistration only succeeds if force is true
     fn accounts_storage_unregister(&mut self, force: Option<bool>) -> bool;
 
-    fn accounts_storage_balance_bounds(
-        &self,
-    ) -> near_contract_standards::storage_management::StorageBalanceBounds;
+    /// Gives the storage bounds for a default account.
+    /// This function is useful for finding the minimum required storage
+    fn accounts_storage_balance_bounds(&self) -> StorageBalanceBounds;
 
+    /// Gives the storage balance of an account
     fn accounts_storage_balance_of(
         &self,
         account_id: near_sdk::AccountId,
     ) -> Option<near_contract_standards::storage_management::StorageBalance>;
 
+    /// Gives the Near balance of an account
+    /// This is a duplicate function of `accounts_storage_balance_of`
+    /// and is used for code readability
     fn accounts_near_balance_of(
         &self,
         account_id: near_sdk::AccountId,
     ) -> Option<near_contract_standards::storage_management::StorageBalance>;
+}
+
+pub trait NearAccountsPluginNonExternal<Info: AccountInfoTrait> {
+    /// Get an account and panic if the account is not registered
+    fn get_account_checked(&self, account_id: &AccountId) -> Account<Info>;
+
+    /// Check that storage requirements are met for an account after the `closure` is called
+    /// ## Arguments 
+    /// * `closure` - a function which can potentially update and store an account
+    fn check_storage<F, T: Sized>(
+        &mut self,
+        account: &mut Account<Info>,
+        account_id: &AccountId,
+        closure: F,
+    ) -> T
+    where
+        F: FnOnce(&mut Accounts<Info>, &mut Account<Info>) -> T;
+
+    /// Forcibly removes an account from the accounts map.
+    /// Note: use with caution
+    fn remove_account_unchecked(&mut self, account_id: &AccountId) -> Option<Account<Info>>;
+
+    /// Inserts/ updates an account without checking that storage bounds are met
+    fn insert_account_unchecked(
+        &mut self,
+        account_id: &AccountId,
+        account: &Account<Info>,
+    ) -> Option<Account<Info>>;
+
+    /// Inserts/ updates an account and checks storage
+    /// 
+    /// ## Example
+    /// ```rust
+    /// self.accounts.insert_account_check_storage(&caller, account);
+    /// ```
+    fn insert_account_check_storage(
+        &mut self,
+        account_id: &AccountId,
+        account: &mut Account<Info>,
+    ) -> Option<Account<Info>>;
+
+    /// Get an account from the accounts map. If it is not found, return `None`
+    fn get_account(&self, account_id: &AccountId) -> Option<Account<Info>>;
 }
 
 /// Account information and storage cost.
@@ -58,9 +155,8 @@ pub struct Accounts<AccountInfoUsed: AccountInfoTrait> {
     pub default_min_storage_bal: u128,
 }
 
-impl<Info: AccountInfoTrait> Accounts<Info> {
-    /// Get an account and panic if the account is not registered
-    pub fn get_account_checked(&self, account_id: &AccountId) -> Account<Info> {
+impl<Info: AccountInfoTrait> NearAccountsPluginNonExternal<Info> for Accounts<Info> {
+    fn get_account_checked(&self, account_id: &AccountId) -> Account<Info> {
         let account = self.accounts.get(account_id);
         if account.is_none() {
             panic!("Account {} is unregistered", account_id);
@@ -68,7 +164,7 @@ impl<Info: AccountInfoTrait> Accounts<Info> {
         account.unwrap()
     }
 
-    pub fn check_storage<F, T: Sized>(
+    fn check_storage<F, T: Sized>(
         &mut self,
         account: &mut Account<Info>,
         account_id: &AccountId,
@@ -82,11 +178,11 @@ impl<Info: AccountInfoTrait> Accounts<Info> {
         ret
     }
 
-    pub fn remove_account_unchecked(&mut self, account_id: &AccountId) -> Option<Account<Info>> {
+    fn remove_account_unchecked(&mut self, account_id: &AccountId) -> Option<Account<Info>> {
         self.accounts.remove(account_id)
     }
 
-    pub fn insert_account_unchecked(
+    fn insert_account_unchecked(
         &mut self,
         account_id: &AccountId,
         account: &Account<Info>,
@@ -94,7 +190,7 @@ impl<Info: AccountInfoTrait> Accounts<Info> {
         self.accounts.insert(account_id, account)
     }
 
-    pub fn insert_account_check_storage(
+    fn insert_account_check_storage(
         &mut self,
         account_id: &AccountId,
         account: &mut Account<Info>,
@@ -104,7 +200,7 @@ impl<Info: AccountInfoTrait> Accounts<Info> {
         })
     }
 
-    pub fn get_account(&self, account_id: &AccountId) -> Option<Account<Info>> {
+    fn get_account(&self, account_id: &AccountId) -> Option<Account<Info>> {
         self.accounts.get(account_id)
     }
 }
