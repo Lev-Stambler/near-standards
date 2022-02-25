@@ -1,5 +1,31 @@
 Near Standards Library
 ===================
+## Library Overview
+This library consists of two libraries which build on top of each other:
+- `near-account`
+- `near-internal-balance-plugin`
+
+Both libraries deal with storing information related to different accounts in a smart contract.
+`near-account` will keep a map of users to some struct. `near-account` will ensure 
+that users pay for their storage via keeping track of storage. It also keeps track
+of the total amount of Near deposited into the smart contract and will keep a `free Near`
+field.
+
+`near-internal-balances-plugin` deals with all things Tokens and is built off of `near-account`. It allows users to transfer 
+tokens into and out of a smart contract. This means that users can "deposit" 
+tokens into a smart contract and the smart contract then has ownership over the tokens.
+But, the smart contract keeps track of the balances. This is basically what [Ref Finance](https://app.ref.finance/) does with tokens.
+
+Currently, the library supports
+- [NFTs (with the NEP 171 standard)](https://nomicon.io/Standards/NonFungibleToken/Core),
+- [FTs (with the NEP 141 standard)](https://nomicon.io/Standards/FungibleToken/Core),
+- Multi Tokens (also known as MT, found [on Github](https://github.com/near/NEPs/pull/245))
+
+For more info on both libraries, please check out the docs.rs
+
+- `near-account` docs TODO:
+- `near-internal-balance-plugin` docs TODO:
+
 ## Building and Testing
 
 To build run:
