@@ -3,6 +3,7 @@ name = "fungible-token-wrapper"
 version = "0.0.1"
 authors = ["Near Inc <hello@near.org>"]
 edition = "2018"
+liscence="MIT"
 
 [dev-dependencies]
 near-sdk-sim = "4.0.0-pre.2"
