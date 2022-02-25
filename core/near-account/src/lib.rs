@@ -412,7 +412,7 @@ mod tests {
     }
 
     #[test]
-    /// Test registering a user, depositing extra into their account and withdrawing
+    /// Test registering a user (with registration only), depositing extra into their account and withdrawing
     fn test_account_storage() {
         let mut context = get_context(accounts(0));
         testing_env!(context.build());
@@ -441,10 +441,17 @@ mod tests {
     }
 
     #[test]
-    fn test_account_storage_registration_only() {}
+    #[should_panic(expected = "The amount is greater than the available storage balance")]
+    fn test_account_storage_withdraw_too_much() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        testing_env!(context.attached_deposit(1).build());
+        let (account, mut near_accounts, mut context) = get_near_accounts(context);
+        let account  = register_account(account.clone(), &mut near_accounts, &mut context);
 
-    #[test]
-    fn test_account_storage_withdraw_too_much() {}
+        let withdrawing_near = account.near_amount + 1_000;
+        let storage_bal_new = near_accounts.storage_withdraw(Some(withdrawing_near.into()));
+    }
 
     #[test]
     fn test_account_storage_unregister() {}
