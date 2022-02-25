@@ -1,4 +1,6 @@
-use near_account::{AccountDeposits, AccountInfoTrait, Accounts, NearAccounts, NewInfo};
+use near_account::{
+    impl_near_accounts_plugin, AccountDeposits, AccountInfoTrait, Accounts, NewInfo,
+};
 use near_internal_balances_plugin::impl_near_balance_plugin;
 
 use near_contract_standards::storage_management::StorageManagement;
@@ -24,15 +26,13 @@ impl NewInfo for AccountInfo {
         }
     }
 }
-
-impl AccountInfoTrait for AccountInfo {}
-
 #[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, NearAccounts)]
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
     pub accounts: Accounts<AccountInfo>,
 }
 
+impl_near_accounts_plugin!(Contract, accounts, AccountInfo);
 impl_near_balance_plugin!(Contract, accounts, AccountInfo, internal_balance);
 
 #[near_bindgen]

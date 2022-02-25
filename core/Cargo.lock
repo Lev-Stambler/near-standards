@@ -1584,8 +1584,8 @@ dependencies = [
 name = "near-account"
 version = "0.1.0"
 dependencies = [
- "near-account-internal",
- "near-account-mac",
+ "near-contract-standards",
+ "near-sdk",
 ]
 
 [[package]]
@@ -1596,23 +1596,6 @@ checksum = "4cd61f43cedc1bb7a7c097ef3adbab0092a51185dca0e48d5851b37818e13978"
 dependencies = [
  "borsh 0.9.1",
  "serde",
-]
-
-[[package]]
-name = "near-account-internal"
-version = "0.1.0"
-dependencies = [
- "near-contract-standards",
- "near-sdk",
-]
-
-[[package]]
-name = "near-account-mac"
-version = "0.1.0"
-dependencies = [
- "near-sdk",
- "quote",
- "syn",
 ]
 
 [[package]]
