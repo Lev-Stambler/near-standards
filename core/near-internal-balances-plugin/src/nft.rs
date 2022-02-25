@@ -106,8 +106,8 @@ mod tests {
 
     use crate::core_impl::internal_balance_get_balance;
     use crate::token_id::TokenId;
+    use crate::utils::test_utils::{get_near_accounts, Info};
     use crate::BalanceInfo;
-    use crate::utils::test_utils::Info;
 
     use super::*;
     use near_account::{Account, NewInfo};
@@ -115,25 +115,8 @@ mod tests {
     use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
     use near_sdk::collections::UnorderedMap;
     use near_sdk::test_utils::{accounts, VMContextBuilder};
-    use near_sdk::{testing_env, Balance};
     use near_sdk::MockedBlockchain;
-
-
-    // TODO: common utils testing
-    fn get_near_accounts(
-        mut context: VMContextBuilder,
-    ) -> (AccountId, AccountId, Accounts<Info>, Account<Info>, VMContextBuilder) {
-        let mut near_accounts = Accounts::<Info>::new();
-        let account: AccountId = accounts(0).into();
-        let tok: AccountId = accounts(2).into();
-        let min = near_accounts.storage_balance_bounds().min.0;
-        testing_env!(context.attached_deposit(min * 10).build());
-        near_accounts.storage_deposit(Some(AccountId::try_from(account.clone()).unwrap()), None);
-        testing_env!(context.attached_deposit(1).build());
-        let near_account = near_accounts.get_account_checked(&account);
-
-        (account, tok, near_accounts, near_account, context)
-    }
+    use near_sdk::{testing_env, Balance};
 
     // mock the context for testing, notice "signer_account_id" that was accessed above from env::
     fn get_context(predecessor_account_id: AccountId) -> VMContextBuilder {
@@ -145,9 +128,6 @@ mod tests {
             .account_balance(INIT_ACCOUNT_BAL);
         builder
     }
-
-    // TODO: register token's with deposits...
-    // TODO: should panic type
 
     #[test]
     #[should_panic]
@@ -212,6 +192,5 @@ mod tests {
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1);
-        // TODO: should we limit the tok bal to 1 for NFT?
     }
 }

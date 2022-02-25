@@ -63,9 +63,6 @@ pub fn ft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     assert_one_yocto();
     let caller = env::predecessor_account_id();
 
-    // TODO: in sep function
-    assert_eq!(env::attached_deposit(), 1, "Expected an attached deposit of 1");
-
     let recipient = recipient.unwrap_or(caller.clone());
 
     let prom = internal_ft_withdraw(accounts, &caller, &token_id, recipient, amount, msg, None);
@@ -112,23 +109,6 @@ fn internal_ft_withdraw<Info: AccountInfoTrait>(
         .unwrap(),
     )
 }
-
-// fn get_transfer_call_data(
-//     recipient: String,
-//     amount: U128,
-//     sender: AccountId,
-//     custom_message: Option<String>,
-// ) -> Vec<u8> {
-//     if let Some(msg) = custom_message {
-//         json!({ "receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
-//     } else {
-//         let on_transfer_opts = OnTransferOpts { sender_id: sender };
-//         // TODO: unwrapping ok?
-//         json!({ "receiver_id": recipient, "amount": amount, "msg": serde_json::to_string(&on_transfer_opts).unwrap() })
-// 					.to_string()
-// 					.into_bytes()
-//     }
-// }
 
 /********** Helper functions **************/
 
@@ -180,9 +160,6 @@ mod tests {
             .account_balance(INIT_ACCOUNT_BAL);
         builder
     }
-
-    // TODO: register token's with deposits...
-    // TODO: should panic type
 
     #[test]
     #[should_panic]

@@ -71,7 +71,6 @@ pub fn resolve_internal_withdraw_call<Info: AccountInfoTrait>(
     if amount == 0 {
         return U128(0);
     }
-    // let account = accounts.get_account_checked(account_id);
     match near_sdk::utils::promise_result_as_success() {
         None => {
             log!("The FT transfer call failed, redepositing funds");
@@ -90,7 +89,6 @@ pub fn resolve_internal_withdraw_call<Info: AccountInfoTrait>(
             } else {
                 amount
             };
-            // TODO: err handling?
             let amount_unused = amount - amount_used;
             log!("Amount unused {}", amount_unused);
             if amount_unused > 0 {
@@ -107,9 +105,6 @@ pub fn get_internal_resolve_promise(
     amount: U128,
     is_call: bool,
 ) -> Result<Promise, serde_json::error::Error> {
-    let internal_resolve_args =
-        json!({"account_id": sender, "token_id": token_id, "amount": amount, "is_call": is_call});
-    // Ok(internal_resolve_args.to_string())
     Ok(ext_self_internal::resolve_internal_withdraw_call(
         sender.clone(),
         token_id.clone(),

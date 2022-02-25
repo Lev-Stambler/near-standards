@@ -68,9 +68,6 @@ pub fn mt_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     assert_one_yocto();
     let caller = env::predecessor_account_id();
 
-    // TODO: in sep function
-    assert_eq!(env::attached_deposit(), 1, "Expected an attached deposit of 1");
-
     let recipient = recipient.unwrap_or(caller.clone());
 
     let prom = internal_mt_withdraw(
@@ -135,7 +132,7 @@ mod tests {
 
     use crate::core_impl::internal_balance_get_balance;
     use crate::token_id::TokenId;
-    use crate::utils::test_utils::Info;
+    use crate::utils::test_utils::{Info, get_near_accounts};
     use crate::BalanceInfo;
 
     use super::*;
@@ -147,21 +144,6 @@ mod tests {
     use near_sdk::testing_env;
     use near_sdk::MockedBlockchain;
 
-    fn get_near_accounts(
-        mut context: VMContextBuilder,
-    ) -> (AccountId, AccountId, Accounts<Info>, Account<Info>, VMContextBuilder) {
-        let mut near_accounts = Accounts::<Info>::new();
-        let account: AccountId = accounts(0).into();
-        let tok: AccountId = accounts(2).into();
-        let min = near_accounts.storage_balance_bounds().min.0;
-        testing_env!(context.attached_deposit(min * 10).build());
-        near_accounts.storage_deposit(Some(AccountId::try_from(account.clone()).unwrap()), None);
-        testing_env!(context.attached_deposit(1).build());
-        let near_account = near_accounts.get_account_checked(&account);
-
-        (account, tok, near_accounts, near_account, context)
-    }
-
     // mock the context for testing, notice "signer_account_id" that was accessed above from env::
     fn get_context(predecessor_account_id: AccountId) -> VMContextBuilder {
         let mut builder = VMContextBuilder::new();
@@ -172,9 +154,6 @@ mod tests {
             .account_balance(INIT_ACCOUNT_BAL);
         builder
     }
-
-    // TODO: register token's with deposits...
-    // TODO: should panic type
 
     #[test]
     #[should_panic]

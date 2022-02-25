@@ -1,9 +1,16 @@
 #[cfg(test)]
 pub mod test_utils {
-    use near_account::NewInfo;
-    use near_sdk::{borsh::{self, BorshSerialize, BorshDeserialize}, collections::UnorderedMap, Balance, AccountId};
+    use std::convert::TryFrom;
 
-    use crate::{TokenId, BalanceInfo, core_impl::AccountInfoTrait};
+    use near_account::{NewInfo, Accounts, Account};
+    use near_contract_standards::storage_management::StorageManagement;
+    use near_sdk::{
+        borsh::{self, BorshDeserialize, BorshSerialize},
+        collections::UnorderedMap,
+        testing_env, AccountId, Balance, test_utils::{VMContextBuilder, accounts},
+    };
+
+    use crate::{core_impl::AccountInfoTrait, BalanceInfo, TokenId};
 
     #[derive(BorshSerialize, BorshDeserialize)]
     pub struct Info {
@@ -32,6 +39,18 @@ pub mod test_utils {
         }
     }
 
-    // impl near_account::AccountInfoTrait for Info {}
-    // impl AccountInfoTrait for Info {}
+    pub fn get_near_accounts(
+        mut context: VMContextBuilder,
+    ) -> (AccountId, AccountId, Accounts<Info>, Account<Info>, VMContextBuilder) {
+        let mut near_accounts = Accounts::<Info>::new();
+        let account: AccountId = accounts(0).into();
+        let tok: AccountId = accounts(2).into();
+        let min = near_accounts.storage_balance_bounds().min.0;
+        testing_env!(context.attached_deposit(min * 10).build());
+        near_accounts.storage_deposit(Some(AccountId::try_from(account.clone()).unwrap()), None);
+        testing_env!(context.attached_deposit(1).build());
+        let near_account = near_accounts.get_account_checked(&account);
+
+        (account, tok, near_accounts, near_account, context)
+    }
 }

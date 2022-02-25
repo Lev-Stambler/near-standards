@@ -150,8 +150,7 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
             log!("Can only unregister if force is true");
             false
         } else {
-            // TODO: make macro for this (sep lib)
-            assert_eq!(env::attached_deposit(), 1, "Expected 1 Near");
+            assert_one_yocto();
             let account_id = env::predecessor_account_id();
             let lookup = self.accounts.remove(&account_id);
             if lookup.is_none() {

@@ -72,8 +72,6 @@ fn simulate_ft_simple_internal_balances_test_with_sender_id() {
     assert_eq!(ft_bal_root.0 - ft_bal_root_post_transfer.0, amount_transfer);
     assert_eq!(ft_bal_alice_internal.0, amount_transfer);
 
-    println!("AA {:?}", ret.logs());
-
     // Withdraw back into the callee's account
     call!(
         alice,
@@ -81,8 +79,6 @@ fn simulate_ft_simple_internal_balances_test_with_sender_id() {
         deposit = 1
     )
     .assert_success();
-
-    println!("AA {:?}", ret.logs());
 
     let ft_bal_alice_post_withdraw: U128 =
         view!(ft.ft_balance_of(alice.account_id())).unwrap_json();
