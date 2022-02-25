@@ -21,9 +21,3 @@ impl Display for TokenId {
         write!(f, "{:?}", self)
     }
 }
-
-impl TokenId {
-    pub(crate) fn new_ft(contract_id: AccountId) -> Self {
-        Self::FT { contract_id }
-    }
-}

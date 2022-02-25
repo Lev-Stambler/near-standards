@@ -2,21 +2,18 @@ use near_account::Accounts;
 use near_sdk::{
     assert_one_yocto, env, ext_contract,
     json_types::U128,
-    log,
     serde_json::{self, json},
     AccountId, Balance, Gas, Promise, PromiseOrValue, ONE_YOCTO,
 };
 
 use crate::{
     core_impl::{
-        get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract, AccountInfoTrait,
-        GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE, RESOLVE_WITHDRAW_NAME,
+        get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract,
+        AccountInfoTrait,
     },
     token_id::TokenId,
     OnTransferOpts,
 };
-
-const MT_TRANSFER_METHOD_NAME: &str = "mt_transfer";
 
 #[ext_contract(ext_mt_receiver)]
 pub trait MultiTokenContract {
@@ -30,9 +27,6 @@ pub trait MultiTokenContract {
     ) -> PromiseOrValue<()>;
 }
 
-const GAS_FOR_MT_RESOLVE_TRANSFER: Gas = Gas(5_000_000_000_000);
-const GAS_FOR_ON_TRANSFER: Gas = Gas(5_000_000_000_000);
-const GAS_FOR_MT_TRANSFER_CALL: Gas = Gas(25_000_000_000_000 + 3 * 5_000_000_000_000);
 const GAS_FOR_MT_TRANSFER: Gas = Gas(5_000_000_000_000);
 
 pub fn mt_on_transfer<Info: AccountInfoTrait>(
@@ -53,8 +47,10 @@ pub fn mt_on_transfer<Info: AccountInfoTrait>(
     }
 
     for i in 0..token_ids.len() {
-        let token_id =
-            TokenId::MT { contract_id: env::predecessor_account_id(), token_id: token_ids[i].clone() };
+        let token_id = TokenId::MT {
+            contract_id: env::predecessor_account_id(),
+            token_id: token_ids[i].clone(),
+        };
         internal_balance_increase(accounts, &opts.sender_id, &token_id, amounts[i].0)
     }
 
@@ -126,7 +122,6 @@ fn internal_mt_withdraw<Info: AccountInfoTrait>(
     )
 }
 
-
 /// Do an internal transfer and subtract the internal balance for {@param sender}
 ///
 /// If there is a custom message, use that for the ft transfer. If not, use the default On Transfer Message
@@ -140,6 +135,7 @@ mod tests {
 
     use crate::core_impl::internal_balance_get_balance;
     use crate::token_id::TokenId;
+    use crate::utils::test_utils::Info;
     use crate::BalanceInfo;
 
     use super::*;
@@ -150,33 +146,6 @@ mod tests {
     use near_sdk::test_utils::{accounts, VMContextBuilder};
     use near_sdk::testing_env;
     use near_sdk::MockedBlockchain;
-
-    #[derive(BorshSerialize, BorshDeserialize)]
-    struct Info {
-        pub internal_balance: UnorderedMap<TokenId, Balance>,
-    }
-
-    impl NewInfo for Info {
-        fn default_from_account_id(account_id: AccountId) -> Self {
-            Self {
-                internal_balance: UnorderedMap::new((format!("{}-bals-i", &account_id)).as_bytes()),
-            }
-        }
-    }
-
-    impl BalanceInfo for Info {
-        fn get_balance(&self, token_id: &TokenId) -> Balance {
-            // TODO: allow for custom balance field
-            self.internal_balance.get(token_id).unwrap_or(0)
-        }
-
-        fn set_balance(&mut self, token_id: &TokenId, balance: Balance) {
-            self.internal_balance.insert(token_id, &balance);
-        }
-    }
-
-    impl near_account::AccountInfoTrait for Info {}
-    impl AccountInfoTrait for Info {}
 
     fn get_near_accounts(
         mut context: VMContextBuilder,
@@ -214,7 +183,16 @@ mod tests {
         testing_env!(context.build());
         testing_env!(context.attached_deposit(1).build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
-        mt_internal_balance_withdraw_to(&mut near_accounts, 1_000, tok, None, None);
+        let contract_id = accounts(3);
+        let mt_token_id = "my tok".to_string();
+        mt_internal_balance_withdraw_to(
+            &mut near_accounts,
+            1_000,
+            contract_id,
+            mt_token_id,
+            None,
+            None,
+        );
     }
 
     #[test]
@@ -226,9 +204,18 @@ mod tests {
         testing_env!(context.build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
 
-        let tok_id = TokenId::new_ft(tok.clone());
+        let mt_token_id = "my tok".to_string();
+        let tok_id = TokenId::MT { contract_id: tok.clone(), token_id: mt_token_id.clone() };
 
-        ft_on_transfer(&mut near_accounts, account.clone(), 1000.to_string(), "".to_string());
+        let contract_id = accounts(3);
+
+        mt_on_transfer(
+            &mut near_accounts,
+            account.clone(),
+            vec![mt_token_id],
+            vec![1_000.into()],
+            "".to_string(),
+        );
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_000);
@@ -250,29 +237,39 @@ mod tests {
         testing_env!(context.build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
 
-        let tok_id = TokenId::new_ft(tok.clone());
+        let mt_token_id = "my tok".to_string();
+        let tok_id = TokenId::MT { contract_id: tok.clone(), token_id: mt_token_id.clone() };
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 0);
 
-        let amount_unused =
-            ft_on_transfer(&mut near_accounts, account.clone(), 1000.to_string(), "".to_string());
-        assert_eq!(amount_unused, "0");
+
+        let amount_unused = mt_on_transfer(
+            &mut near_accounts,
+            account.clone(),
+            vec![mt_token_id.clone()],
+            vec![1000.into()],
+            "".to_string(),
+        );
+
+        assert_eq!(amount_unused.len(), 1);
+        assert_eq!(amount_unused[0].0, 0);
 
         let near_account = near_accounts.get_account_checked(&account);
-        let tok_id = TokenId::new_ft(tok.clone());
+
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_000);
 
-        let amount_unused = ft_on_transfer(
+        let amount_unused = mt_on_transfer(
             &mut near_accounts,
             accounts(1).into(),
-            100.to_string(),
+            vec![mt_token_id],
+            vec![100.into()],
             serde_json::to_string(&OnTransferOpts { sender_id: account.clone() }).unwrap(),
         );
 
-        assert_eq!(amount_unused, "0");
+        assert_eq!(amount_unused.len(), 1);
+        assert_eq!(amount_unused[0].0, 0);
         let near_account = near_accounts.get_account_checked(&account);
-        let tok_id = TokenId::new_ft(tok.clone());
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 1_100);
     }

@@ -6,7 +6,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-near-internal-balances-plugin-internal = {path = "./near-internal-balances-plugin-internal"}
+near-contract-standards = "4.0.0-pre.2"
+near-sdk = "4.0.0-pre.2"
+near-account = { path = "../near-account" }
 
 [lib]
 crate-type = ["cdylib", "rlib"]

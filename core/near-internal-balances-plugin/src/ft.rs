@@ -9,56 +9,54 @@ use near_sdk::{
 
 use crate::{
     core_impl::{
-        get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract, AccountInfoTrait,
-        GAS_BUFFER, GAS_FOR_INTERNAL_RESOLVE, RESOLVE_WITHDRAW_NAME,
+        get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract,
+        AccountInfoTrait,
     },
     token_id::TokenId,
     OnTransferOpts,
 };
 
-const NFT_TRANSFER_CALL_METHOD_NAME: &str = "nft_transfer_call";
-const NFT_TRANSFER_METHOD_NAME: &str = "nft_transfer";
-
-// TODO: check over with contract
-const GAS_FOR_NFT_RESOLVE_TRANSFER_NEP171: Gas = Gas(5_000_000_000_000);
-const GAS_FOR_ON_TRANSFER_NEP171: Gas = Gas(5_000_000_000_000);
-const GAS_FOR_NFT_TRANSFER_CALL_NEP171: Gas = Gas(25_000_000_000_000 + 3 * 5_000_000_000_000);
-
-#[ext_contract(ext_nft)]
-trait NFTContract {
-    fn nft_transfer(
+#[ext_contract(ext_ft)]
+trait FTContract {
+    fn ft_transfer(
         &mut self,
         receiver_id: AccountId,
-        token_id: String,
+        amount: U128,
         memo: Option<String>,
     ) -> Promise;
 }
 
-pub fn nft_on_transfer<Info: AccountInfoTrait>(
+const GAS_FOR_FT_TRANSFER_CALL_NEP141: Gas = Gas(25_000_000_000_000 + 3 * 5_000_000_000_000);
+
+pub fn ft_on_transfer<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
-    _sender_id: AccountId,
-    previous_owner_id: AccountId,
-    token_id: String,
+    sender_id: AccountId,
+    amount: String,
     msg: String,
-) -> bool {
+) -> String {
+    log!("GOT HERE?");
     let opts: OnTransferOpts = if (&msg).len() == 0 {
-        OnTransferOpts { sender_id: previous_owner_id.clone().into() }
+        OnTransferOpts { sender_id: sender_id.clone().into() }
     } else {
         serde_json::from_str(&msg)
             .unwrap_or_else(|e| panic!("Failed to deserialize transfer opts: {}", e))
     };
-    let contract_id = env::predecessor_account_id();
-    let token_id = TokenId::NFT { contract_id, token_id };
-    let amount = 1;
-    internal_balance_increase(accounts, &opts.sender_id, &token_id, amount);
+    let token_id = env::predecessor_account_id();
+    let amount = amount.parse::<u128>().unwrap();
+    internal_balance_increase(
+        accounts,
+        &opts.sender_id,
+        &TokenId::FT { contract_id: token_id },
+        amount,
+    );
 
-    false
+    "0".to_string()
 }
 
-pub fn nft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
+pub fn ft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
-    contract_id: AccountId,
-    token_id: String,
+    amount: u128,
+    token_id: AccountId,
     recipient: Option<AccountId>,
     msg: Option<String>,
 ) -> Promise {
@@ -70,41 +68,67 @@ pub fn nft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
 
     let recipient = recipient.unwrap_or(caller.clone());
 
-    let prom =
-        internal_nft_withdraw(accounts, &caller, contract_id, token_id, recipient, msg, None);
+    let prom = internal_ft_withdraw(accounts, &caller, &token_id, recipient, amount, msg, None);
     prom
 }
 
-fn internal_nft_withdraw<Info: AccountInfoTrait>(
+fn internal_ft_withdraw<Info: AccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender: &AccountId,
-    contract_id: AccountId,
-    token_id: String,
+    contract_id: &AccountId,
     recipient: AccountId,
+    amount: u128,
     memo: Option<String>,
     prior_promise: Option<Promise>,
 ) -> Promise {
-    let internal_tok_id =
-        TokenId::NFT { contract_id: contract_id.clone(), token_id: token_id.clone() };
-    internal_balance_subtract(accounts, sender, &internal_tok_id, 1);
+    internal_balance_subtract(
+        accounts,
+        sender,
+        &TokenId::FT { contract_id: contract_id.clone() },
+        amount,
+    );
 
-    let transfer_prom = ext_nft::nft_transfer(
+    let transfer_prom = ext_ft::ft_transfer(
         recipient.clone(),
-        token_id.clone(),
+        amount.into(),
         memo,
         contract_id.clone(),
         ONE_YOCTO,
-        GAS_FOR_NFT_TRANSFER_CALL_NEP171,
+        GAS_FOR_FT_TRANSFER_CALL_NEP141,
     );
-    let nft_transfer_prom = match prior_promise {
+
+    let ft_transfer_prom = match prior_promise {
         None => transfer_prom,
         Some(prior_prom) => prior_prom.then(transfer_prom),
     };
 
-    nft_transfer_prom.then(
-        get_internal_resolve_promise(&sender, &internal_tok_id, U128::from(1), false).unwrap(),
+    ft_transfer_prom.then(
+        get_internal_resolve_promise(
+            &sender,
+            &TokenId::FT { contract_id: contract_id.clone() },
+            U128::from(amount),
+            false,
+        )
+        .unwrap(),
     )
 }
+
+// fn get_transfer_call_data(
+//     recipient: String,
+//     amount: U128,
+//     sender: AccountId,
+//     custom_message: Option<String>,
+// ) -> Vec<u8> {
+//     if let Some(msg) = custom_message {
+//         json!({ "receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
+//     } else {
+//         let on_transfer_opts = OnTransferOpts { sender_id: sender };
+//         // TODO: unwrapping ok?
+//         json!({ "receiver_id": recipient, "amount": amount, "msg": serde_json::to_string(&on_transfer_opts).unwrap() })
+// 					.to_string()
+// 					.into_bytes()
+//     }
+// }
 
 /********** Helper functions **************/
 
@@ -116,6 +140,7 @@ mod tests {
 
     use crate::core_impl::internal_balance_get_balance;
     use crate::token_id::TokenId;
+    use crate::utils::test_utils::Info;
     use crate::BalanceInfo;
 
     use super::*;
@@ -127,34 +152,9 @@ mod tests {
     use near_sdk::testing_env;
     use near_sdk::MockedBlockchain;
 
-    #[derive(BorshSerialize, BorshDeserialize)]
-    struct Info {
-        pub internal_balance: UnorderedMap<TokenId, Balance>,
-    }
-
-    impl NewInfo for Info {
-        fn default_from_account_id(account_id: AccountId) -> Self {
-            Self {
-                internal_balance: UnorderedMap::new((format!("{}-bals-i", &account_id)).as_bytes()),
-            }
-        }
-    }
-
-    impl BalanceInfo for Info {
-        fn get_balance(&self, token_id: &TokenId) -> Balance {
-            // TODO: allow for custom balance field
-            self.internal_balance.get(token_id).unwrap_or(0)
-        }
-
-        fn set_balance(&mut self, token_id: &TokenId, balance: Balance) {
-            self.internal_balance.insert(token_id, &balance);
-        }
-    }
-
     impl near_account::AccountInfoTrait for Info {}
     impl AccountInfoTrait for Info {}
 
-    // TODO: common utils testing
     fn get_near_accounts(
         mut context: VMContextBuilder,
     ) -> (AccountId, AccountId, Accounts<Info>, Account<Info>, VMContextBuilder) {
@@ -186,41 +186,39 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_nft_not_enough_balance() {
+    fn test_ft_not_enough_balance() {
         let mut context = get_context(accounts(2));
         testing_env!(context.build());
         testing_env!(context.attached_deposit(1).build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
-        nft_internal_balance_withdraw_to(&mut near_accounts, account, tok.to_string(), None, None);
+        ft_internal_balance_withdraw_to(&mut near_accounts, 1_000, tok, None, None);
     }
 
     #[test]
-    fn test_nft_adding_balances_and_then_subtracting() {}
+    fn test_ft_adding_balances_and_then_subtracting() {}
 
     #[test]
-    fn test_nft_subtracting_balances() {
+    fn test_ft_subtracting_balances() {
         let mut context = get_context(accounts(2));
         testing_env!(context.build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
 
-        let tok_id_str = "tok".to_string();
-        let tok_id = TokenId::NFT { contract_id: tok, token_id: tok_id_str.clone() };
+        let tok_id = TokenId::FT { contract_id: tok.clone() };
 
-        nft_on_transfer(
-            &mut near_accounts,
-            account.clone(),
-            account.clone(),
-            tok_id_str,
-            "".to_string(),
-        );
+        ft_on_transfer(&mut near_accounts, account.clone(), 1000.to_string(), "".to_string());
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
-        assert_eq!(bal, 1);
+        assert_eq!(bal, 1_000);
 
-        internal_balance_subtract(&mut near_accounts, &account, &tok_id, 1);
+        internal_balance_subtract(&mut near_accounts, &account, &tok_id, 100);
         let near_account = near_accounts.get_account_checked(&account);
         let bal = internal_balance_get_balance(&near_account, &tok_id);
-        assert_eq!(bal, 0);
+        assert_eq!(bal, 900);
+
+        internal_balance_subtract(&mut near_accounts, &account, &tok_id, 100);
+        let near_account = near_accounts.get_account_checked(&account);
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
+        assert_eq!(bal, 800);
     }
 
     #[test]
@@ -229,36 +227,43 @@ mod tests {
         testing_env!(context.build());
         let (account, tok, mut near_accounts, near_account, context) = get_near_accounts(context);
 
-        let tok_id_str = "tok".to_string();
-        let tok_id = TokenId::NFT { contract_id: tok.clone(), token_id: tok_id_str.clone() };
-
+        let tok_id = TokenId::FT { contract_id: tok.clone() };
         let bal = internal_balance_get_balance(&near_account, &tok_id);
         assert_eq!(bal, 0);
 
-        let success = nft_on_transfer(
-            &mut near_accounts,
-            account.clone(),
-            account.clone(),
-            tok_id_str.clone(),
-            "".to_string(),
-        );
-        assert_eq!(success, true);
+        let amount_unused =
+            ft_on_transfer(&mut near_accounts, account.clone(), 1000.to_string(), "".to_string());
+        assert_eq!(amount_unused, "0");
 
         let near_account = near_accounts.get_account_checked(&account);
+        let tok_id = TokenId::FT { contract_id: tok.clone() };
         let bal = internal_balance_get_balance(&near_account, &tok_id);
-        assert_eq!(bal, 1);
-        // TODO: should we limit the tok bal to 1 for NFT?
+        assert_eq!(bal, 1_000);
+
+        let amount_unused = ft_on_transfer(
+            &mut near_accounts,
+            accounts(1).into(),
+            100.to_string(),
+            serde_json::to_string(&OnTransferOpts { sender_id: account.clone() }).unwrap(),
+        );
+
+        assert_eq!(amount_unused, "0");
+        let near_account = near_accounts.get_account_checked(&account);
+        let tok_id = TokenId::FT { contract_id: tok.clone() };
+        let bal = internal_balance_get_balance(&near_account, &tok_id);
+        assert_eq!(bal, 1_100);
     }
 }
 
-fn get_transfer_data(
-    recipient: AccountId,
-    token_id: &String,
-    custom_message: Option<String>,
-) -> Vec<u8> {
-    if let Some(msg) = custom_message {
-        json!({"receiver_id": recipient, "token_id": token_id, "msg": msg}).to_string().into_bytes()
-    } else {
-        json!({"receiver_id": recipient, "token_id": token_id}).to_string().into_bytes()
-    }
-}
+// fn get_transfer_data(
+//     recipient: AccountId,
+//     amount: U128,
+//     sender: AccountId,
+//     custom_message: Option<String>,
+// ) -> Vec<u8> {
+//     if let Some(msg) = custom_message {
+//         json!({"receiver_id": recipient, "amount": amount, "msg": msg}).to_string().into_bytes()
+//     } else {
+//         json!({"receiver_id": recipient, "amount": amount}).to_string().into_bytes()
+//     }
+// }
