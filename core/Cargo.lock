@@ -1680,13 +1680,6 @@ dependencies = [
 name = "near-internal-balances-plugin"
 version = "0.1.0"
 dependencies = [
- "near-internal-balances-plugin-internal",
-]
-
-[[package]]
-name = "near-internal-balances-plugin-internal"
-version = "0.1.0"
-dependencies = [
  "near-account",
  "near-contract-standards",
  "near-sdk",
