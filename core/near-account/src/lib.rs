@@ -216,6 +216,7 @@ impl<Info: AccountInfoTrait> Accounts<Info> {
     }
 }
 
+// TODO: PUBLIC FUNCTION WITH GET MIN COST FOR AN ACCOUNT ID (use borsh to j get # bytes)
 impl<Info: AccountInfoTrait> Accounts<Info> {
     /// Get the cost of storage
     /// * `unregister` - if set to false then the get_storage_cost will also register the default account with the account id
@@ -250,7 +251,7 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
             let account_id = env::predecessor_account_id();
             let lookup = self.accounts.remove(&account_id);
             if lookup.is_none() {
-                panic!("Cannot unregister a non-existant account");
+                panic!("Cannot unregister a non-existent account");
             } else {
                 log!("Deleting account {}", account_id);
                 let account = lookup.unwrap();
@@ -318,10 +319,10 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
             self.accounts.insert(&account_id, &account);
             account.storage_balance()
         } else {
+            // The account does not yet exist and must be created
             // NOTE: get_storage also registers the account id here
             let storage_cost = self.get_storage_cost(Some(account_id.clone()), false);
-            let min_storage_cost = self.storage_balance_bounds().min.0;
-            if amount_attached < storage_cost || amount_attached < min_storage_cost {
+            if amount_attached < storage_cost {
                 self.accounts.remove(&account_id);
                 Promise::new(env::predecessor_account_id()).transfer(amount_attached);
                 StorageBalance { available: 0.into(), total: 0.into() }
@@ -365,6 +366,8 @@ mod tests {
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, Balance};
 
+    const default_message: &str = "listening to anime lofi";
+
     #[derive(BorshSerialize, BorshDeserialize)]
     pub struct Info {
         pub msg: String,
@@ -372,7 +375,7 @@ mod tests {
 
     impl NewInfo for Info {
         fn default_from_account_id(account_id: AccountId) -> Self {
-            Self { msg: "listening to anime lofi".to_string() }
+            Self { msg: default_message.to_string() }
         }
     }
 
@@ -447,28 +450,84 @@ mod tests {
         testing_env!(context.build());
         testing_env!(context.attached_deposit(1).build());
         let (account, mut near_accounts, mut context) = get_near_accounts(context);
-        let account  = register_account(account.clone(), &mut near_accounts, &mut context);
+        let account = register_account(account.clone(), &mut near_accounts, &mut context);
 
         let withdrawing_near = account.near_amount + 1_000;
-        let storage_bal_new = near_accounts.storage_withdraw(Some(withdrawing_near.into()));
+        near_accounts.storage_withdraw(Some(withdrawing_near.into()));
     }
 
     #[test]
-    fn test_account_storage_unregister() {}
+    fn test_account_storage_unregister() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        testing_env!(context.attached_deposit(1).build());
+        let (account, mut near_accounts, mut context) = get_near_accounts(context);
+        register_account(account.clone(), &mut near_accounts, &mut context);
+
+        near_accounts.storage_unregister(Some(true));
+        assert!(near_accounts.accounts.get(&account).is_none());
+    }
 
     #[test]
-    #[should_panic]
-    fn test_get_account_checked_panic() {}
+    #[should_panic(expected = "Account alice is unregistered")]
+    fn test_get_account_checked_panic() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        testing_env!(context.attached_deposit(1).build());
+
+        let (account, mut near_accounts, mut context) = get_near_accounts(context);
+        near_accounts.get_account_checked(&account);
+    }
 
     #[test]
-    #[should_panic]
-    fn test_insert_account_checked_not_enough_near() {}
+    fn test_insert_account_checked_update_storage() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        testing_env!(context.attached_deposit(1).build());
+        let (account, mut near_accounts, mut context) = get_near_accounts(context);
+        register_account(account.clone(), &mut near_accounts, &mut context);
+
+        let new_message: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let storage_incr = new_message.len() - default_message.len();
+        let cost = storage_incr as u128 * env::storage_byte_cost();
+        testing_env!(context.attached_deposit(cost).build());
+        let orig_storage_bal = near_accounts.storage_balance_of(account.clone()).unwrap();
+        near_accounts.storage_deposit(None, None);
+
+        let mut account_s = near_accounts.get_account_checked(&account);
+        account_s.info.msg = new_message.to_string();
+        near_accounts.insert_account_check_storage(&account, &mut account_s);
+
+        let storage_bal = near_accounts.storage_balance_of(account.clone()).unwrap();
+        assert_eq!(storage_bal.available.0, 0);
+        assert_eq!(storage_bal.total.0, orig_storage_bal.total.0 + cost);
+    }
 
     #[test]
-    #[should_panic]
-    fn test_insert_account_checked_non_registered() {}
+    #[should_panic(expected = "Not enough Near to cover the transaction")]
+    fn test_insert_account_checked_not_enough_near() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        testing_env!(context.attached_deposit(1).build());
+        let (account, mut near_accounts, mut context) = get_near_accounts(context);
+        let mut account_s = register_account(account.clone(), &mut near_accounts, &mut context);
+
+        account_s.info.msg = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_string();
+        near_accounts.insert_account_check_storage(&account, &mut account_s);
+    }
 
     #[test]
-    #[should_panic]
-    fn test_insert_account_non_existent() {}
+    #[should_panic(expected = "Not enough Near to cover the transaction")]
+    fn test_insert_account_checked_non_registered() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        testing_env!(context.attached_deposit(1).build());
+        let (account, mut near_accounts, mut context) = get_near_accounts(context);
+        let mut account_s = Account::<Info> {
+            near_amount: 1_000_000_000,
+            near_used_for_storage: 0,
+            info: Info::default_from_account_id(account.clone()),
+        };
+        near_accounts.insert_account_check_storage(&account, &mut account_s);
+    }
 }
