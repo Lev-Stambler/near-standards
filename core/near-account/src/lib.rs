@@ -37,7 +37,7 @@
 //!
 //! For documentation on functions for internal contract use, please see the
 //! [NearAccountsPluginNonExternal trait](trait.NearAccountsPluginNonExternal.html)
-//! and the [AccountDeposits trait](trait.AccountDeposits)
+//! and the [AccountDeposits trait](trait.AccountDeposits.html)
 
 use std::str::FromStr;
 
