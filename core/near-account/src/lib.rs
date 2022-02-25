@@ -31,7 +31,7 @@
 //!
 //! impl_near_accounts_plugin!(Contract, accounts, AccountInfo);
 //! ```
-//! 
+//!
 //! For documentation on externally defined functions, please see the
 //! [NearAccountPlugin trait](trait.NearAccountPlugin.html)
 //!
@@ -50,7 +50,7 @@ use near_sdk::{
     collections::UnorderedMap,
     env::{self},
     json_types::U128,
-    log, AccountId, Balance, Promise,
+    log, AccountId, Promise,
 };
 
 mod account;
@@ -110,7 +110,7 @@ pub trait NearAccountsPluginNonExternal<Info: AccountInfoTrait> {
     fn get_account_checked(&self, account_id: &AccountId) -> Account<Info>;
 
     /// Check that storage requirements are met for an account after the `closure` is called
-    /// ## Arguments 
+    /// ## Arguments
     /// * `closure` - a function which can potentially update and store an account
     fn check_storage<F, T: Sized>(
         &mut self,
@@ -133,7 +133,7 @@ pub trait NearAccountsPluginNonExternal<Info: AccountInfoTrait> {
     ) -> Option<Account<Info>>;
 
     /// Inserts/ updates an account and checks storage
-    /// 
+    ///
     /// ## Example
     /// ```rust
     /// self.accounts.insert_account_check_storage(&caller, account);
@@ -280,9 +280,7 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
             Promise::new(env::predecessor_account_id()).transfer(amount);
             account.storage_balance()
         } else {
-            env::panic(
-                format!("The account {} is not registered", &predecessor_account_id).as_bytes(),
-            );
+            panic!("The account {} is not registered", &predecessor_account_id);
         }
     }
 
@@ -328,7 +326,7 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
                 Promise::new(env::predecessor_account_id()).transfer(amount_attached);
                 StorageBalance { available: 0.into(), total: 0.into() }
             } else if registration_only {
-                let amount_refund = storage_cost - amount_attached;
+                let amount_refund = amount_attached - storage_cost;
                 let mut account = self.accounts.get(&account_id).unwrap();
                 account.near_amount = storage_cost;
                 account.near_used_for_storage = storage_cost;
@@ -351,3 +349,119 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
 }
 
 // TODO: basic unit tests
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    const INIT_ACCOUNT_BAL: u128 = 10_000;
+
+    use std::convert::TryFrom;
+
+    use super::*;
+    use crate::{Account, NewInfo};
+    use near_contract_standards::storage_management::StorageManagement;
+    use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+    use near_sdk::collections::UnorderedMap;
+    use near_sdk::test_utils::{accounts, VMContextBuilder};
+    use near_sdk::MockedBlockchain;
+    use near_sdk::{testing_env, Balance};
+
+    #[derive(BorshSerialize, BorshDeserialize)]
+    pub struct Info {
+        pub msg: String,
+    }
+
+    impl NewInfo for Info {
+        fn default_from_account_id(account_id: AccountId) -> Self {
+            Self { msg: "listening to anime lofi".to_string() }
+        }
+    }
+
+    impl AccountInfoTrait for Info {}
+
+    fn get_near_accounts(
+        mut context: VMContextBuilder,
+    ) -> (AccountId, Accounts<Info>, VMContextBuilder) {
+        let mut near_accounts = Accounts::<Info>::new();
+        let account: AccountId = accounts(0).into();
+        (account, near_accounts, context)
+    }
+
+    // mock the context for testing, notice "signer_account_id" that was accessed above from env::
+    fn get_context(predecessor_account_id: AccountId) -> VMContextBuilder {
+        let mut builder = VMContextBuilder::new();
+        builder
+            .current_account_id(accounts(0))
+            .signer_account_id(predecessor_account_id.clone())
+            .predecessor_account_id(predecessor_account_id)
+            .account_balance(INIT_ACCOUNT_BAL);
+        builder
+    }
+
+    fn register_account(
+        account: AccountId,
+        near_accounts: &mut Accounts<Info>,
+        context: &mut VMContextBuilder,
+    ) -> Account<Info> {
+        let min = near_accounts.storage_balance_bounds().min.0;
+        testing_env!(context.attached_deposit(min * 10).build());
+        near_accounts
+            .storage_deposit(Some(AccountId::try_from(account.clone()).unwrap()), Some(true));
+        testing_env!(context.attached_deposit(1).build());
+        let near_account = near_accounts.get_account_checked(&account);
+        near_account
+    }
+
+    #[test]
+    /// Test registering a user, depositing extra into their account and withdrawing
+    fn test_account_storage() {
+        let mut context = get_context(accounts(0));
+        testing_env!(context.build());
+        testing_env!(context.attached_deposit(1).build());
+        let (account, mut near_accounts, mut context) = get_near_accounts(context);
+        register_account(account.clone(), &mut near_accounts, &mut context);
+
+        // Check the storage post registration
+        let storage_bounds = near_accounts.storage_balance_bounds();
+        let storage_bal = near_accounts.storage_balance_of(account.clone()).unwrap();
+        assert!(storage_bal.total.0 <= storage_bounds.min.0);
+        assert_eq!(storage_bal.available.0, 0);
+
+        let adding_near = 1_000_000_000_000_000;
+        testing_env!(context.attached_deposit(adding_near).build());
+        let storage_bal_new = near_accounts.storage_deposit(Some(account.clone()), None);
+        assert_eq!(storage_bal.total.0 + adding_near, storage_bal_new.total.0);
+        assert_eq!(storage_bal_new.available.0, adding_near);
+
+        let withdrawing_near = 1_000;
+        testing_env!(context.attached_deposit(1).build());
+        let storage_bal_new = near_accounts.storage_withdraw(Some(withdrawing_near.into()));
+
+        assert_eq!(storage_bal.total.0 + adding_near - withdrawing_near, storage_bal_new.total.0);
+        assert_eq!(storage_bal_new.available.0, adding_near - withdrawing_near);
+    }
+
+    #[test]
+    fn test_account_storage_registration_only() {}
+
+    #[test]
+    fn test_account_storage_withdraw_too_much() {}
+
+    #[test]
+    fn test_account_storage_unregister() {}
+
+    #[test]
+    #[should_panic]
+    fn test_get_account_checked_panic() {}
+
+    #[test]
+    #[should_panic]
+    fn test_insert_account_checked_not_enough_near() {}
+
+    #[test]
+    #[should_panic]
+    fn test_insert_account_checked_non_registered() {}
+
+    #[test]
+    #[should_panic]
+    fn test_insert_account_non_existent() {}
+}

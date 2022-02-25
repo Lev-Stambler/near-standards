@@ -3,7 +3,7 @@ use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
     json_types::U128,
-    AccountId, Balance, Promise, StorageUsage,
+    AccountId, Balance, Promise,
 };
 
 use crate::{Accounts, NewInfo};
