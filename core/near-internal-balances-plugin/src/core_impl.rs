@@ -4,7 +4,7 @@ use crate::{
     ft::ft_internal_balance_withdraw_to, mt::mt_internal_balance_withdraw_to,
     nft::nft_internal_balance_withdraw_to,
 };
-use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo};
+use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo, NearAccountsPluginNonExternal};
 use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{
     assert_one_yocto,

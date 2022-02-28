@@ -1,6 +1,6 @@
 [package]
 liscence="MIT"
-description="A library for managing account data on Near Smart Contracts"
+description="A library for managing account data and storage on Near Smart Contracts"
 repository="https://github.com/Lev-Stambler/near-standards"
 name = "near-account"
 version = "0.1.0"

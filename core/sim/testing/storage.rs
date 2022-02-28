@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use near_contract_standards::storage_management::{StorageBalance, StorageBalanceBounds};
+use near_sdk::env;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{self, Deserialize, Serialize};
 use near_sdk::serde_json::json;
@@ -18,12 +19,22 @@ fn simulate_deposit_storage() {
 
     let deposit_amount = 1_000_000;
     let prior_bal: StorageBalance =
-        view!(dummy.storage_balance_of(alice.account_id())).unwrap_json();
+        view!(dummy.accounts_storage_balance_of(alice.account_id())).unwrap_json();
 
     call!(alice, dummy.accounts_storage_deposit(None, None), deposit = deposit_amount)
         .assert_success();
 
     let bal_post_deposit: StorageBalance =
-        view!(dummy.storage_balance_of(alice.account_id())).unwrap_json();
+        view!(dummy.accounts_storage_balance_of(alice.account_id())).unwrap_json();
     assert_eq!(prior_bal.total.0, bal_post_deposit.total.0 - deposit_amount);
+
+    call!(alice, dummy.accounts_storage_withdraw(Some(deposit_amount.into())), deposit = 1)
+        .assert_success();
+
+    let new_bal: StorageBalance =
+        view!(dummy.accounts_storage_balance_of(alice.account_id())).unwrap_json();
+    assert_eq!(prior_bal.total.0, new_bal.total.0);
+
+    call!(alice, dummy.accounts_storage_unregister(Some(true)), deposit = 1).assert_success();
+    // TODO: how to test
 }

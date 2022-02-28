@@ -2,6 +2,7 @@
 macro_rules! impl_near_accounts_plugin {
     ($contract_struct: ident, $accounts: ident, $info_struct: ident) => {
         impl AccountInfoTrait for $info_struct {}
+        use $crate::NearAccountPlugin;
 
         #[near_sdk::near_bindgen]
         impl $crate::NearAccountPlugin for $contract_struct {

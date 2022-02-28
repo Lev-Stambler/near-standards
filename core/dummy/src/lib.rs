@@ -1,5 +1,5 @@
 use near_account::{
-    impl_near_accounts_plugin, AccountDeposits, AccountInfoTrait, Accounts, NewInfo,
+    impl_near_accounts_plugin, AccountDeposits, AccountInfoTrait, Accounts, NewInfo, NearAccountsPluginNonExternal,
 };
 use near_internal_balances_plugin::impl_near_balance_plugin;
 
