@@ -4,6 +4,7 @@ version = "0.0.1"
 authors = ["Lev Stambler levstamb@gmail.com"]
 edition = "2018"
 license="MIT"
+description = "wrapper for near libraries"
 
 [dev-dependencies]
 near-sdk-sim = "4.0.0-pre.2"
