@@ -3,14 +3,14 @@
 //!
 //! Usage is quite simple. First define a struct for what info the contract should store for each account
 //! So, for example, if the contract intends to keep track of a message associated with each user
-//! ```rust
+//! ```ignore
 //! #[derive(BorshDeserialize, BorshSerialize)]
 //! pub struct AccountInfo {
 //!     pub message: String,
 //! }
 //! ```
 //! Then, the contract must implement the `NewInfo` trait for `AccountInfo`, so, for example
-//! ```rust
+//! ```ignore
 //!   impl NewInfo for AccountInfo {
 //!   fn default_from_account_id(account_id: AccountId) -> Self {
 //!       Self {
@@ -22,7 +22,7 @@
 //! ```
 //!
 //! Finally, all that is left to do is define the contract and call the implementing macro
-//! ```rust
+//! ```ignore
 //! #[near_bindgen]
 //! #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 //! pub struct Contract {
@@ -135,7 +135,7 @@ pub trait NearAccountsPluginNonExternal<Info: AccountInfoTrait> {
     /// Inserts/ updates an account and checks storage
     ///
     /// ## Example
-    /// ```rust
+    /// ```ignore
     /// self.accounts.insert_account_check_storage(&caller, account);
     /// ```
     fn insert_account_check_storage(
@@ -353,7 +353,6 @@ impl<Info: AccountInfoTrait> StorageManagement for Accounts<Info> {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
-    const INIT_ACCOUNT_BAL: u128 = 10_000;
 
     use std::convert::TryFrom;
 
@@ -391,12 +390,13 @@ mod tests {
 
     // mock the context for testing, notice "signer_account_id" that was accessed above from env::
     fn get_context(predecessor_account_id: AccountId) -> VMContextBuilder {
+        let init_account_bal = 10_000 * env::storage_byte_cost();
         let mut builder = VMContextBuilder::new();
         builder
             .current_account_id(accounts(0))
             .signer_account_id(predecessor_account_id.clone())
             .predecessor_account_id(predecessor_account_id)
-            .account_balance(INIT_ACCOUNT_BAL);
+            .account_balance(init_account_bal);
         builder
     }
 
