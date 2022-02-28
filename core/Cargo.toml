@@ -1,9 +1,9 @@
 [package]
-name = "fungible-token-wrapper"
+name = "near-accounts-plugins-wrapper"
 version = "0.0.1"
-authors = ["Near Inc <hello@near.org>"]
+authors = ["Lev Stambler levstamb@gmail.com"]
 edition = "2018"
-liscence="MIT"
+license="MIT"
 
 [dev-dependencies]
 near-sdk-sim = "4.0.0-pre.2"

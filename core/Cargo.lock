@@ -1014,21 +1014,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fungible-token-wrapper"
-version = "0.0.1"
-dependencies = [
- "dummy",
- "ft",
- "multi-token",
- "multi-token-standard",
- "near-contract-standards",
- "near-internal-balances-plugin",
- "near-sdk",
- "near-sdk-sim",
- "nft",
-]
-
-[[package]]
 name = "funty"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1596,6 +1581,21 @@ checksum = "4cd61f43cedc1bb7a7c097ef3adbab0092a51185dca0e48d5851b37818e13978"
 dependencies = [
  "borsh 0.9.1",
  "serde",
+]
+
+[[package]]
+name = "near-accounts-plugins-wrapper"
+version = "0.0.1"
+dependencies = [
+ "dummy",
+ "ft",
+ "multi-token",
+ "multi-token-standard",
+ "near-contract-standards",
+ "near-internal-balances-plugin",
+ "near-sdk",
+ "near-sdk-sim",
+ "nft",
 ]
 
 [[package]]
