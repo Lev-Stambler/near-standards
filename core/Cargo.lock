@@ -1661,7 +1661,7 @@ dependencies = [
 
 [[package]]
 name = "near-internal-balances-plugin"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "near-account",
  "near-contract-standards",
