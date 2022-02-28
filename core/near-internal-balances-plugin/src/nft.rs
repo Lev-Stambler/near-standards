@@ -96,8 +96,6 @@ fn internal_nft_withdraw<Info: AccountInfoTrait>(
     )
 }
 
-/********** Helper functions **************/
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     const INIT_ACCOUNT_BAL: u128 = 10_000;
