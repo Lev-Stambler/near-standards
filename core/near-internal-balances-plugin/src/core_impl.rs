@@ -4,10 +4,7 @@ use crate::{
     ft::ft_internal_balance_withdraw_to, mt::mt_internal_balance_withdraw_to,
     nft::nft_internal_balance_withdraw_to,
 };
-use near_account::{
-    Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NearAccountsPluginNonExternal,
-    NewInfo,
-};
+use near_account::{Account, AccountInfoTrait, Accounts, NearAccountsPluginNonExternal, NewInfo};
 use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{
     assert_one_yocto,
@@ -21,7 +18,7 @@ use near_sdk::{
 
 use crate::{token_id::TokenId, BalanceInfo, OnTransferOpts};
 
-pub trait BalanceAccountInfoTrait: DefaultAccountInfo + BalanceInfo {}
+pub trait BalanceAccountInfoTrait: AccountInfoTrait + BalanceInfo {}
 
 pub const RESOLVE_WITHDRAW_NAME: &str = "resolve_internal_withdraw_call";
 pub const GAS_BUFFER: Gas = Gas(5_000_000_000_000u64);

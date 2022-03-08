@@ -7,7 +7,8 @@
 //! Usage is quite simple, here is a basic example
 //! ```
 //! use near_account::{
-//!     impl_near_accounts_plugin, AccountDeposits, AccountInfoTrait, Accounts, NewInfo, NearAccountsPluginNonExternal,
+//!     impl_near_accounts_plugin, AccountDeposits, AccountInfoTrait, Accounts, NearAccountPlugin,
+//!     NearAccountsPluginNonExternal, NewInfo,
 //! };
 //! use near_internal_balances_plugin::impl_near_balance_plugin;
 //! 
