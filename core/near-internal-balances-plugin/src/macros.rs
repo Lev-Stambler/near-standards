@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! impl_near_balance_plugin {
     ($contract_struct: ident, $accounts: ident, $info_struct: ident, $balance_map: ident) => {
-        use $crate::{BalanceInfo, NearFTInternalBalance, SudoInternalBalanceHandlers};
+        use $crate::{BalanceInfo, NearInternalBalance, SudoInternalBalanceHandlers};
 
         use $crate::core_impl::BalanceAccountInfoTrait;
         pub use $crate::InternalBalanceHandlers;
@@ -137,10 +137,7 @@ macro_rules! impl_near_balance_plugin {
                 &self,
                 account_id: AccountId,
             ) -> Vec<(TokenId, U128)> {
-                $crate::core_impl::internal_balance_get_all_balances(
-                    &self.$accounts,
-                    &account_id,
-                )
+                $crate::core_impl::internal_balance_get_all_balances(&self.$accounts, &account_id)
             }
 
             fn internal_balance_transfer(
@@ -194,6 +191,6 @@ macro_rules! impl_near_balance_plugin {
                 )
             }
         }
-        impl NearFTInternalBalance for $contract_struct {}
+        impl NearInternalBalance for $contract_struct {}
     };
 }
