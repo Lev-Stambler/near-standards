@@ -10,7 +10,7 @@ use near_sdk::{
 use crate::{
     core_impl::{
         get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract,
-        AccountInfoTrait,
+        BalanceAccountInfoTrait,
     },
     token_id::TokenId,
     OnTransferOpts,
@@ -28,7 +28,7 @@ trait FTContract {
 
 const GAS_FOR_FT_TRANSFER_CALL_NEP141: Gas = Gas(25_000_000_000_000 + 3 * 5_000_000_000_000);
 
-pub fn ft_on_transfer<Info: AccountInfoTrait>(
+pub fn ft_on_transfer<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender_id: AccountId,
     amount: String,
@@ -53,7 +53,7 @@ pub fn ft_on_transfer<Info: AccountInfoTrait>(
     "0".to_string()
 }
 
-pub fn ft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
+pub fn ft_internal_balance_withdraw_to<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     amount: u128,
     token_id: AccountId,
@@ -69,7 +69,7 @@ pub fn ft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     prom
 }
 
-fn internal_ft_withdraw<Info: AccountInfoTrait>(
+fn internal_ft_withdraw<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender: &AccountId,
     contract_id: &AccountId,
@@ -132,8 +132,8 @@ mod tests {
     use near_sdk::testing_env;
     use near_sdk::MockedBlockchain;
 
-    impl near_account::AccountInfoTrait for Info {}
-    impl AccountInfoTrait for Info {}
+    impl near_account::BalanceAccountInfoTrait for Info {}
+    impl BalanceAccountInfoTrait for Info {}
 
     fn get_near_accounts(
         mut context: VMContextBuilder,

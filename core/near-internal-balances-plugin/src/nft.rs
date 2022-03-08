@@ -9,7 +9,7 @@ use near_sdk::{
 use crate::{
     core_impl::{
         get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract,
-        AccountInfoTrait,
+        BalanceAccountInfoTrait,
     },
     token_id::TokenId,
     OnTransferOpts,
@@ -27,7 +27,7 @@ trait NFTContract {
     ) -> Promise;
 }
 
-pub fn nft_on_transfer<Info: AccountInfoTrait>(
+pub fn nft_on_transfer<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     _sender_id: AccountId,
     previous_owner_id: AccountId,
@@ -48,7 +48,7 @@ pub fn nft_on_transfer<Info: AccountInfoTrait>(
     false
 }
 
-pub fn nft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
+pub fn nft_internal_balance_withdraw_to<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     contract_id: AccountId,
     token_id: String,
@@ -65,7 +65,7 @@ pub fn nft_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     prom
 }
 
-fn internal_nft_withdraw<Info: AccountInfoTrait>(
+fn internal_nft_withdraw<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender: &AccountId,
     contract_id: AccountId,

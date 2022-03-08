@@ -1,7 +1,14 @@
 //! near-accounts allows for keeping track of data associated with an account
 //! as well as storage management.
 //!
-//! Usage is quite simple. First define a struct for what info the contract should store for each account
+//! Usage is quite simple. Start with the required imports
+//! ```ignore
+//! use near_account::{
+//!     impl_near_accounts_plugin, Account, AccountDeposits, Accounts, NearAccountPlugin,
+//!     NearAccountsPluginNonExternal, NewInfo,
+//! };
+//! ```
+//! After, define a struct for what info the contract should store for each account
 //! So, for example, if the contract intends to keep track of a message associated with each user
 //! ```ignore
 //! #[derive(BorshDeserialize, BorshSerialize)]

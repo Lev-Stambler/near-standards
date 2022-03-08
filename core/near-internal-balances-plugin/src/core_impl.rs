@@ -4,7 +4,10 @@ use crate::{
     ft::ft_internal_balance_withdraw_to, mt::mt_internal_balance_withdraw_to,
     nft::nft_internal_balance_withdraw_to,
 };
-use near_account::{Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NewInfo, NearAccountsPluginNonExternal};
+use near_account::{
+    Account, AccountInfoTrait as DefaultAccountInfo, Accounts, NearAccountsPluginNonExternal,
+    NewInfo,
+};
 use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{
     assert_one_yocto,
@@ -18,7 +21,7 @@ use near_sdk::{
 
 use crate::{token_id::TokenId, BalanceInfo, OnTransferOpts};
 
-pub trait AccountInfoTrait: DefaultAccountInfo + BalanceInfo {}
+pub trait BalanceAccountInfoTrait: DefaultAccountInfo + BalanceInfo {}
 
 pub const RESOLVE_WITHDRAW_NAME: &str = "resolve_internal_withdraw_call";
 pub const GAS_BUFFER: Gas = Gas(5_000_000_000_000u64);
@@ -35,14 +38,14 @@ pub trait InternalBalanceResolver {
     ) -> PromiseOrValue<U128>;
 }
 
-pub fn internal_balance_get_balance<Info: AccountInfoTrait>(
+pub fn internal_balance_get_balance<Info: BalanceAccountInfoTrait>(
     account: &Account<Info>,
     token_id: &TokenId,
 ) -> u128 {
     account.info.get_balance(token_id)
 }
 
-pub fn internal_balance_get_all_balances<Info: AccountInfoTrait>(
+pub fn internal_balance_get_all_balances<Info: BalanceAccountInfoTrait>(
     accounts: &Accounts<Info>,
     account_id: &AccountId,
 ) -> Vec<(TokenId, U128)> {
@@ -60,7 +63,7 @@ pub fn internal_balance_get_all_balances<Info: AccountInfoTrait>(
 /// Resolve the ft transfer by updating the amount used in the balances
 /// `is_call` - If false, assume that an ft_transfer occurred
 /// @returns the amount used
-pub fn resolve_internal_withdraw_call<Info: AccountInfoTrait>(
+pub fn resolve_internal_withdraw_call<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     account_id: &AccountId,
     token_id: TokenId,
@@ -117,7 +120,7 @@ pub fn get_internal_resolve_promise(
 }
 
 /// Get the cost of adding 1 balance to a user's account
-pub fn internal_balance_get_storage_cost<Info: AccountInfoTrait>(
+pub fn internal_balance_get_storage_cost<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     token_id: TokenId,
 ) -> Balance {
@@ -142,7 +145,7 @@ pub fn internal_balance_get_storage_cost<Info: AccountInfoTrait>(
     return (storage_usage - storage_usage_init_with_account) as u128 * env::storage_byte_cost();
 }
 
-pub fn internal_balance_withdraw_to<Info: AccountInfoTrait>(
+pub fn internal_balance_withdraw_to<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     amount: u128,
     token_id: &TokenId,
@@ -172,7 +175,7 @@ pub fn internal_balance_withdraw_to<Info: AccountInfoTrait>(
     }
 }
 
-pub fn internal_balance_transfer<Info: AccountInfoTrait>(
+pub fn internal_balance_transfer<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     recipient: &AccountId,
     token_id: &TokenId,
@@ -188,7 +191,7 @@ pub fn internal_balance_transfer<Info: AccountInfoTrait>(
     internal_balance_increase(accounts, &recipient, token_id, amount);
 }
 
-pub fn internal_balance_increase<Info: AccountInfoTrait>(
+pub fn internal_balance_increase<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     account_id: &AccountId,
     token_id: &TokenId,
@@ -210,7 +213,7 @@ pub fn internal_balance_increase<Info: AccountInfoTrait>(
     accounts.insert_account_check_storage(account_id, &mut account);
 }
 
-pub fn internal_balance_subtract<Info: AccountInfoTrait>(
+pub fn internal_balance_subtract<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     account_id: &AccountId,
     token: &TokenId,

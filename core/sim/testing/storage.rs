@@ -36,5 +36,4 @@ fn simulate_deposit_storage() {
     assert_eq!(prior_bal.total.0, new_bal.total.0);
 
     call!(alice, dummy.accounts_storage_unregister(Some(true)), deposit = 1).assert_success();
-    // TODO: how to test
 }

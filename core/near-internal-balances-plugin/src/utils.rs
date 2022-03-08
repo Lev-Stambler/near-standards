@@ -10,7 +10,7 @@ pub mod test_utils {
         testing_env, AccountId, Balance, test_utils::{VMContextBuilder, accounts},
     };
 
-    use crate::{core_impl::AccountInfoTrait, BalanceInfo, TokenId};
+    use crate::{core_impl::BalanceAccountInfoTrait, BalanceInfo, TokenId};
 
     #[derive(BorshSerialize, BorshDeserialize)]
     pub struct Info {

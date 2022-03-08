@@ -9,7 +9,7 @@ use near_sdk::{
 use crate::{
     core_impl::{
         get_internal_resolve_promise, internal_balance_increase, internal_balance_subtract,
-        AccountInfoTrait,
+        BalanceAccountInfoTrait,
     },
     token_id::TokenId,
     OnTransferOpts,
@@ -29,7 +29,7 @@ pub trait MultiTokenContract {
 
 const GAS_FOR_MT_TRANSFER: Gas = Gas(5_000_000_000_000);
 
-pub fn mt_on_transfer<Info: AccountInfoTrait>(
+pub fn mt_on_transfer<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender_id: AccountId,
     token_ids: Vec<String>,
@@ -57,7 +57,7 @@ pub fn mt_on_transfer<Info: AccountInfoTrait>(
     vec![0.into(); token_ids.len()]
 }
 
-pub fn mt_internal_balance_withdraw_to<Info: AccountInfoTrait>(
+pub fn mt_internal_balance_withdraw_to<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     amount: u128,
     contract_id: AccountId,
@@ -83,7 +83,7 @@ pub fn mt_internal_balance_withdraw_to<Info: AccountInfoTrait>(
     prom
 }
 
-fn internal_mt_withdraw<Info: AccountInfoTrait>(
+fn internal_mt_withdraw<Info: BalanceAccountInfoTrait>(
     accounts: &mut Accounts<Info>,
     sender: &AccountId,
     contract_id: AccountId,

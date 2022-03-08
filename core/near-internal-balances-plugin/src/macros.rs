@@ -3,6 +3,7 @@ macro_rules! impl_near_balance_plugin {
     ($contract_struct: ident, $accounts: ident, $info_struct: ident, $balance_map: ident) => {
         use $crate::{BalanceInfo, NearFTInternalBalance, SudoInternalBalanceHandlers};
 
+        use $crate::core_impl::BalanceAccountInfoTrait;
         pub use $crate::InternalBalanceHandlers;
 
         impl $crate::BalanceInfo for $info_struct {
@@ -19,7 +20,7 @@ macro_rules! impl_near_balance_plugin {
             }
         }
 
-        impl $crate::core_impl::AccountInfoTrait for $info_struct {}
+        impl BalanceAccountInfoTrait for $info_struct {}
 
         impl SudoInternalBalanceHandlers for $contract_struct {
             fn internal_balance_subtract(
