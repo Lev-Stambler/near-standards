@@ -39,7 +39,7 @@
 //! impl_near_accounts_plugin!(Contract, accounts, AccountInfo);
 //! ```
 //!
-//! For documentation on externally defined functions, please see the
+//! For documentation on externally defined methods (publicly callable), please see the
 //! [NearAccountPlugin trait](trait.NearAccountPlugin.html)
 //!
 //! For documentation on functions for internal contract use, please see the
